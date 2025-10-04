@@ -6,6 +6,7 @@ import type {
   StudentQueryParams,
   UserQueryParams,
   StudentStats,
+  UserStatsResponse,
   PageResponse,
   ApiResponse
 } from '@/types/student'
@@ -81,7 +82,7 @@ export const batchDeleteStudents = (ids: number[]) => {
 
 // 获取学生统计信息
 export const getStudentStats = () => {
-  return request.get<StudentStats>('/api/admin/users/stats')
+  return request.get<UserStatsResponse>('/api/admin/users/stats')
 }
 
 // 搜索学生

@@ -24,7 +24,6 @@ export interface User {
   status: UserStatus
   avatar?: string
   studentId?: string  // 后端返回的学号字段
-  studentNumber?: string  // 兼容旧字段
   schoolName?: string  // 后端返回的学院字段
   college?: string  // 兼容旧字段
   department?: string  // 系别
@@ -39,7 +38,6 @@ export interface User {
 
 // 学生信息接口
 export interface Student extends User {
-  studentNumber?: string
   college?: string
   major?: string
   grade?: string
@@ -55,7 +53,7 @@ export interface UserRegisterRequest {
   realName: string
   role: UserRole
   // 学生专用字段
-  studentNumber?: string
+  studentId?: string  // 修复：使用 studentId 与后端保持一致
   // 教师专用字段
   teacherId?: string
   // 通用字段
@@ -86,7 +84,6 @@ export interface UserUpdateRequest {
   phone?: string
   realName?: string
   studentId?: string
-  studentNumber?: string
   schoolName?: string  // 学院
   college?: string
   department?: string  // 系别

@@ -240,7 +240,7 @@ public class AdminController {
                 errorResponse.put("message", "缺少status参数");
                 return ResponseEntity.badRequest().body(errorResponse);
             }
-            
+
             // 验证状态值
             User.UserStatus userStatus;
             try {
@@ -251,14 +251,14 @@ public class AdminController {
                 errorResponse.put("message", "无效的状态值: " + status);
                 return ResponseEntity.badRequest().body(errorResponse);
             }
-            
+
             User updatedUser = userService.updateUserStatus(id, userStatus);
-            
+
             Map<String, Object> response = new HashMap<>();
             response.put("success", true);
             response.put("message", "用户状态更新成功");
             response.put("user", updatedUser);
-            
+
             return ResponseEntity.ok(response);
         } catch (RuntimeException e) {
             Map<String, Object> errorResponse = new HashMap<>();
@@ -269,6 +269,37 @@ public class AdminController {
             Map<String, Object> errorResponse = new HashMap<>();
             errorResponse.put("success", false);
             errorResponse.put("message", "更新用户状态失败: " + e.getMessage());
+            return ResponseEntity.badRequest().body(errorResponse);
+        }
+    }
+
+    // 重置用户密码
+    @PutMapping("/users/{id}/reset-password")
+    public ResponseEntity<?> resetPassword(@PathVariable Long id, @RequestBody(required = false) Map<String, String> request) {
+        try {
+            // 获取新密码，如果没有提供则使用默认密码
+            String newPassword = "123456";
+            if (request != null && request.containsKey("newPassword")) {
+                newPassword = request.get("newPassword");
+            }
+
+            User updatedUser = userService.resetPassword(id, newPassword);
+
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", true);
+            response.put("message", "密码重置成功");
+            response.put("user", updatedUser);
+
+            return ResponseEntity.ok(response);
+        } catch (RuntimeException e) {
+            Map<String, Object> errorResponse = new HashMap<>();
+            errorResponse.put("success", false);
+            errorResponse.put("message", e.getMessage());
+            return ResponseEntity.badRequest().body(errorResponse);
+        } catch (Exception e) {
+            Map<String, Object> errorResponse = new HashMap<>();
+            errorResponse.put("success", false);
+            errorResponse.put("message", "重置密码失败: " + e.getMessage());
             return ResponseEntity.badRequest().body(errorResponse);
         }
     }

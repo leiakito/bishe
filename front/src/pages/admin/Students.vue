@@ -170,9 +170,9 @@
       >
         <el-table-column type="selection" width="50" />
         
-        <el-table-column prop="studentNumber" label="学号" width="100">
+        <el-table-column prop="studentId" label="学号" width="100">
           <template #default="{ row }">
-            <span class="font-mono text-blue-600 text-sm">{{ row.studentNumber }}</span>
+            <span class="font-mono text-blue-600 text-sm">{{ row.studentId || '-' }}</span>
           </template>
         </el-table-column>
         
@@ -202,25 +202,15 @@
         <el-table-column prop="college" label="学院/专业" min-width="120" class-name="dept-column">
           <template #default="{ row }">
             <div class="flex flex-col text-sm">
-              <span class="font-medium">{{ row.college || '-' }}</span>
-              <span class="text-xs text-gray-500" v-if="row.major && row.major !== row.college">
+              <span class="font-medium">{{ row.schoolName || row.college || '-' }}</span>
+              <span class="text-xs text-gray-500" v-if="row.major && row.major !== (row.schoolName || row.college)">
                 {{ row.major }}
               </span>
             </div>
           </template>
         </el-table-column>
         
-        <!-- 年级/班级在中等屏幕隐藏 -->
-        <el-table-column prop="grade" label="年级/班级" width="100" class-name="grade-column hidden-md">
-          <template #default="{ row }">
-            <div class="flex flex-col text-sm">
-              <span class="font-medium">{{ row.grade || '-' }}</span>
-              <span class="text-xs text-gray-500" v-if="row.className">
-                {{ row.className }}
-              </span>
-            </div>
-          </template>
-        </el-table-column>
+
         
         <el-table-column prop="status" label="状态" width="90">
           <template #default="{ row }">
@@ -367,8 +357,6 @@ const queryParams = reactive<StudentQueryParams>({
   page: 1,
   size: 20,
   keyword: '',
-  college: '',
-  grade: '',
   status: undefined,
   sortBy: 'createdAt',
   sortDir: 'desc'
@@ -426,8 +414,6 @@ const handleReset = () => {
     page: 1,
     size: 20,
     keyword: '',
-    college: '',
-    grade: '',
     status: undefined,
     sortBy: 'createdAt',
     sortDir: 'desc'
@@ -574,8 +560,6 @@ const handleExport = async () => {
     const exportParams = {
       status: queryParams.status,
       keyword: queryParams.keyword,
-      college: queryParams.college,
-      grade: queryParams.grade,
       sortBy: queryParams.sortBy,
       sortDir: queryParams.sortDir
     }
@@ -619,9 +603,9 @@ const formatDateShort = (date?: string) => {
 
 // 监听查询参数变化
 watch(
-  () => [queryParams.college, queryParams.grade, queryParams.status],
+  () => [queryParams.status],
   () => {
-    if (queryParams.college || queryParams.grade || queryParams.status) {
+    if (queryParams.status) {
       handleSearch()
     }
   }

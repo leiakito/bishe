@@ -73,23 +73,47 @@ public class TeamController {
             @RequestParam(defaultValue = "createdAt") String sortBy,
             @RequestParam(defaultValue = "desc") String sortDir) {
         try {
-            Sort sort = sortDir.equalsIgnoreCase("desc") ? 
+            System.out.println("=== getAllTeams 开始 ===");
+            System.out.println("参数: page=" + page + ", size=" + size);
+
+            Sort sort = sortDir.equalsIgnoreCase("desc") ?
                 Sort.by(sortBy).descending() : Sort.by(sortBy).ascending();
             Pageable pageable = PageRequest.of(page, size, sort);
-            
+
             Page<Team> teams = teamService.getAllTeams(pageable);
+            System.out.println("从数据库查询到 " + teams.getContent().size() + " 个团队");
+
+            // 检查第一个团队的关联数据
+            if (!teams.getContent().isEmpty()) {
+                Team firstTeam = teams.getContent().get(0);
+                System.out.println("第一个团队: " + firstTeam.getName());
+                System.out.println("  - Competition: " + (firstTeam.getCompetition() != null ? firstTeam.getCompetition().getName() : "NULL"));
+                System.out.println("  - Leader: " + (firstTeam.getLeader() != null ? firstTeam.getLeader().getUsername() : "NULL"));
+            }
+
+            // 转换为DTO以包含competition和leader信息
+            System.out.println("开始转换为 DTO...");
+            java.util.List<com.example.demo.dto.TeamDTO> teamDTOs = teams.getContent().stream()
+                .map(com.example.demo.dto.TeamDTO::new)
+                .collect(java.util.stream.Collectors.toList());
+
+            System.out.println("DTO 转换完成，共 " + teamDTOs.size() + " 个");
+            System.out.println("=== getAllTeams 完成 ===");
+
             return ResponseEntity.ok(Map.of(
                 "success", true,
-                "data", teams.getContent(),
+                "data", teamDTOs,
                 "totalElements", teams.getTotalElements(),
                 "totalPages", teams.getTotalPages(),
                 "currentPage", teams.getNumber(),
                 "size", teams.getSize()
             ));
         } catch (Exception e) {
+            System.err.println("=== getAllTeams 错误 ===");
+            e.printStackTrace();
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of(
                 "success", false,
-                "message", "获取团队列表失败"
+                "message", "获取团队列表失败: " + e.getMessage()
             ));
         }
     }
@@ -267,16 +291,23 @@ public class TeamController {
             Pageable pageable = PageRequest.of(page, size, Sort.by("createdAt").descending());
             List<Team> teamList = teamService.getAvailableTeams(competitionId);
             Page<Team> teams = new PageImpl<>(teamList, pageable, teamList.size());
+
+            // 转换为DTO以包含competition和leader信息
+            java.util.List<com.example.demo.dto.TeamDTO> teamDTOs = teams.getContent().stream()
+                .map(com.example.demo.dto.TeamDTO::new)
+                .collect(java.util.stream.Collectors.toList());
+
             return ResponseEntity.ok(Map.of(
                 "success", true,
-                "data", teams.getContent(),
+                "data", teamDTOs,
                 "totalElements", teams.getTotalElements(),
                 "totalPages", teams.getTotalPages()
             ));
         } catch (Exception e) {
+            e.printStackTrace();
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of(
                 "success", false,
-                "message", "获取可加入团队失败"
+                "message", "获取可加入团队失败: " + e.getMessage()
             ));
         }
     }
@@ -603,29 +634,99 @@ public class TeamController {
     @PostMapping("/join-by-code")
     public ResponseEntity<?> joinTeamByInviteCode(@RequestBody Map<String, Object> request) {
         try {
-            String inviteCode = (String) request.get("inviteCode");
-            Long userId = Long.valueOf(request.get("userId").toString());
-            String reason = (String) request.get("reason");
-            
-            if (inviteCode == null || inviteCode.trim().isEmpty()) {
+            // 严格的类型校验和过滤
+            Object inviteCodeObj = request.get("inviteCode");
+            Object userIdObj = request.get("userId");
+            Object reasonObj = request.get("reason");
+
+            // 验证 inviteCode 类型必须是 String
+            if (inviteCodeObj == null) {
                 return ResponseEntity.badRequest().body(Map.of(
                     "success", false,
                     "message", "邀请码不能为空"
                 ));
             }
-            
-            if (userId == null) {
+
+            if (!(inviteCodeObj instanceof String)) {
+                return ResponseEntity.badRequest().body(Map.of(
+                    "success", false,
+                    "message", "邀请码参数类型错误，必须是字符串"
+                ));
+            }
+
+            String inviteCode = ((String) inviteCodeObj).trim();
+
+            // 验证邀请码格式
+            if (inviteCode.isEmpty()) {
+                return ResponseEntity.badRequest().body(Map.of(
+                    "success", false,
+                    "message", "邀请码不能为空"
+                ));
+            }
+
+            // 验证邀请码长度（通常是8位）
+            if (inviteCode.length() < 4 || inviteCode.length() > 20) {
+                return ResponseEntity.badRequest().body(Map.of(
+                    "success", false,
+                    "message", "邀请码格式错误"
+                ));
+            }
+
+            // 验证邀请码只包含字母数字和连字符
+            if (!inviteCode.matches("^[A-Za-z0-9-]+$")) {
+                return ResponseEntity.badRequest().body(Map.of(
+                    "success", false,
+                    "message", "邀请码只能包含字母、数字和连字符"
+                ));
+            }
+
+            // 验证 userId
+            if (userIdObj == null) {
                 return ResponseEntity.badRequest().body(Map.of(
                     "success", false,
                     "message", "用户ID不能为空"
                 ));
             }
-            
+
+            Long userId;
+            try {
+                userId = Long.valueOf(userIdObj.toString());
+            } catch (NumberFormatException e) {
+                return ResponseEntity.badRequest().body(Map.of(
+                    "success", false,
+                    "message", "用户ID格式错误"
+                ));
+            }
+
+            // 验证 reason（可选参数）
+            String reason = null;
+            if (reasonObj != null) {
+                if (!(reasonObj instanceof String)) {
+                    return ResponseEntity.badRequest().body(Map.of(
+                        "success", false,
+                        "message", "申请理由参数类型错误，必须是字符串"
+                    ));
+                }
+                reason = ((String) reasonObj).trim();
+                // 限制申请理由长度
+                if (reason.length() > 500) {
+                    return ResponseEntity.badRequest().body(Map.of(
+                        "success", false,
+                        "message", "申请理由不能超过500个字符"
+                    ));
+                }
+            }
+
             TeamMember teamMember = teamService.joinTeamByInviteCode(inviteCode, userId, reason);
             return ResponseEntity.ok(Map.of(
                 "success", true,
                 "message", "成功加入团队",
                 "data", teamMember
+            ));
+        } catch (ClassCastException e) {
+            return ResponseEntity.badRequest().body(Map.of(
+                "success", false,
+                "message", "请求参数类型错误"
             ));
         } catch (RuntimeException e) {
             return ResponseEntity.badRequest().body(Map.of(

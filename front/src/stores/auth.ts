@@ -36,8 +36,7 @@ export const useAuthStore = defineStore('auth', () => {
         user.value = {
           ...responseData.userInfo,
           college: responseData.userInfo.college || responseData.userInfo.schoolName,
-          major: responseData.userInfo.major || responseData.userInfo.department,
-          studentNumber: responseData.userInfo.studentNumber || responseData.userInfo.studentId
+          major: responseData.userInfo.major || responseData.userInfo.department
         }
         
         // 保存token到localStorage
@@ -122,8 +121,7 @@ export const useAuthStore = defineStore('auth', () => {
         user.value = {
           ...userData,
           college: (userData as any).schoolName || userData.college, // 将schoolName映射为college
-          major: (userData as any).department || userData.major, // 将department映射为major
-          studentNumber: (userData as any).studentId || userData.studentNumber // 将studentId映射为studentNumber
+          major: (userData as any).department || userData.major // 将department映射为major
         }
         console.log('用户信息已更新:', user.value)
         return true
@@ -133,8 +131,7 @@ export const useAuthStore = defineStore('auth', () => {
         user.value = {
           ...userData,
           college: userData.schoolName || userData.college,
-          major: userData.department || userData.major,
-          studentNumber: userData.studentId || userData.studentNumber
+          major: userData.department || userData.major
         }
         console.log('用户信息已更新:', user.value)
         return true

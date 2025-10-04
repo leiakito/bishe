@@ -22,9 +22,9 @@
           </h3>
         </div>
         
-        <el-form-item label="学号" prop="studentNumber">
+        <el-form-item label="学号" prop="studentId">
           <el-input
-            v-model="formData.studentNumber"
+            v-model="formData.studentId"
             placeholder="请输入学号"
             :disabled="mode === 'edit'"
             maxlength="20"
@@ -77,110 +77,7 @@
           </el-select>
         </el-form-item>
         
-        <!-- 学籍信息 -->
-        <div class="col-span-2 mt-4">
-          <h3 class="text-lg font-semibold text-gray-800 mb-4 border-b border-gray-200 pb-2">
-            学籍信息
-          </h3>
-        </div>
-        
-        <el-form-item label="学院" prop="college">
-          <el-select
-            v-model="formData.college"
-            placeholder="请选择学院"
-            filterable
-            class="w-full"
-          >
-            <el-option
-              v-for="college in colleges"
-              :key="college.value"
-              :label="college.label"
-              :value="college.value"
-            />
-          </el-select>
-        </el-form-item>
-        
-        <el-form-item label="专业" prop="major">
-          <el-input
-            v-model="formData.major"
-            placeholder="请输入专业"
-            maxlength="100"
-            show-word-limit
-          />
-        </el-form-item>
-        
-        <el-form-item label="年级" prop="grade">
-          <el-select v-model="formData.grade" placeholder="请选择年级">
-            <el-option label="2021级" value="2021" />
-            <el-option label="2022级" value="2022" />
-            <el-option label="2023级" value="2023" />
-            <el-option label="2024级" value="2024" />
-          </el-select>
-        </el-form-item>
-        
-        <el-form-item label="班级" prop="className">
-          <el-input
-            v-model="formData.className"
-            placeholder="请输入班级"
-            maxlength="50"
-            show-word-limit
-          />
-        </el-form-item>
-        
-        <!-- 个人信息 -->
-        <div class="col-span-2 mt-4">
-          <h3 class="text-lg font-semibold text-gray-800 mb-4 border-b border-gray-200 pb-2">
-            个人信息
-          </h3>
-        </div>
-        
-        <el-form-item label="性别" prop="gender">
-          <el-radio-group v-model="formData.gender">
-            <el-radio label="MALE">男</el-radio>
-            <el-radio label="FEMALE">女</el-radio>
-            <el-radio label="OTHER">其他</el-radio>
-          </el-radio-group>
-        </el-form-item>
-        
-        <el-form-item label="出生日期" prop="birthDate">
-          <el-date-picker
-            v-model="formData.birthDate"
-            type="date"
-            placeholder="请选择出生日期"
-            format="YYYY-MM-DD"
-            value-format="YYYY-MM-DD"
-            class="w-full"
-          />
-        </el-form-item>
-        
-        <el-form-item label="身份证号" prop="idCard">
-          <el-input
-            v-model="formData.idCard"
-            placeholder="请输入身份证号"
-            maxlength="18"
-            show-word-limit
-          />
-        </el-form-item>
-        
-        <el-form-item label="家庭住址" prop="address">
-          <el-input
-            v-model="formData.address"
-            placeholder="请输入家庭住址"
-            maxlength="200"
-            show-word-limit
-          />
-        </el-form-item>
-        
-        <el-form-item label="个人简介" prop="bio" class="col-span-2">
-          <el-input
-            v-model="formData.bio"
-            type="textarea"
-            placeholder="请输入个人简介"
-            :rows="3"
-            maxlength="500"
-            show-word-limit
-          />
-        </el-form-item>
+
         
         <!-- 密码设置（仅新增时显示） -->
         <template v-if="mode === 'add'">
@@ -260,36 +157,17 @@ const loading = ref(false)
 
 // 表单数据
 const formData = reactive({
-  studentNumber: '',
+  studentId: '',  // 修复：使用 studentId 与后端保持一致
   username: '',
   realName: '',
   email: '',
   phone: '',
-  college: '',
-  major: '',
-  grade: '',
-  className: '',
-  gender: '',
-  birthDate: '',
-  idCard: '',
-  address: '',
-  bio: '',
   status: 'APPROVED',
   password: '',
   confirmPassword: ''
 })
 
-// 学院选项
-const colleges = ref([
-  { label: '计算机科学与技术学院', value: '计算机科学与技术学院' },
-  { label: '软件学院', value: '软件学院' },
-  { label: '信息工程学院', value: '信息工程学院' },
-  { label: '数学与统计学院', value: '数学与统计学院' },
-  { label: '物理与电子工程学院', value: '物理与电子工程学院' },
-  { label: '化学与材料工程学院', value: '化学与材料工程学院' },
-  { label: '生命科学学院', value: '生命科学学院' },
-  { label: '经济管理学院', value: '经济管理学院' }
-])
+
 
 // 计算属性
 const visible = computed({
@@ -304,7 +182,7 @@ const dialogTitle = computed(() => {
 // 表单验证规则
 const formRules = computed<FormRules>(() => {
   const rules: FormRules = {
-    studentNumber: [
+    studentId: [  // 修复：使用 studentId 与后端保持一致
       { required: true, message: '请输入学号', trigger: 'blur' },
       { min: 6, max: 20, message: '学号长度应为6-20位', trigger: 'blur' },
       { pattern: /^[a-zA-Z0-9]+$/, message: '学号只能包含字母和数字', trigger: 'blur' }
@@ -324,18 +202,6 @@ const formRules = computed<FormRules>(() => {
     ],
     phone: [
       { pattern: /^1[3-9]\d{9}$/, message: '请输入正确的手机号格式', trigger: 'blur' }
-    ],
-    college: [
-      { required: true, message: '请选择学院', trigger: 'change' }
-    ],
-    major: [
-      { required: true, message: '请输入专业', trigger: 'blur' }
-    ],
-    grade: [
-      { required: true, message: '请选择年级', trigger: 'change' }
-    ],
-    idCard: [
-      { pattern: /^[1-9]\d{5}(18|19|20)\d{2}((0[1-9])|(1[0-2]))(([0-2][1-9])|10|20|30|31)\d{3}[0-9Xx]$/, message: '请输入正确的身份证号格式', trigger: 'blur' }
     ]
   }
   
@@ -367,20 +233,11 @@ const formRules = computed<FormRules>(() => {
 // 方法
 const resetForm = () => {
   Object.assign(formData, {
-    studentNumber: '',
+    studentId: '',  // 修复：使用 studentId 与后端保持一致
     username: '',
     realName: '',
     email: '',
     phone: '',
-    college: '',
-    major: '',
-    grade: '',
-    className: '',
-    gender: '',
-    birthDate: '',
-    idCard: '',
-    address: '',
-    bio: '',
     status: 'APPROVED',
     password: '',
     confirmPassword: ''
@@ -392,20 +249,11 @@ const resetForm = () => {
 const loadStudentData = () => {
   if (props.student && props.mode === 'edit') {
     Object.assign(formData, {
-      studentNumber: props.student.studentNumber || '',
+      studentId: props.student.studentId || '',  // 修复：使用 studentId 与后端保持一致
       username: props.student.username || '',
       realName: props.student.realName || '',
       email: props.student.email || '',
       phone: props.student.phone || '',
-      college: props.student.college || '',
-      major: props.student.major || '',
-      grade: props.student.grade || '',
-      className: props.student.className || '',
-      gender: (props.student as any).gender || '',
-      birthDate: (props.student as any).birthDate || '',
-      idCard: (props.student as any).idCard || '',
-      address: (props.student as any).address || '',
-      bio: props.student.bio || '',
       status: props.student.status || 'APPROVED'
     })
   }
@@ -426,16 +274,7 @@ const handleSubmit = async () => {
         realName: formData.realName,
         email: formData.email,
         phone: formData.phone,
-        studentNumber: formData.studentNumber,
-        college: formData.college,
-        major: formData.major,
-        grade: formData.grade,
-        className: formData.className,
-        gender: formData.gender as 'MALE' | 'FEMALE',
-        birthDate: formData.birthDate,
-        idCard: formData.idCard,
-        address: formData.address,
-        bio: formData.bio,
+        studentId: formData.studentId,  // 修复：使用 studentId 与后端保持一致
         status: 'APPROVED'  // 确保新学生默认为启用状态
       }
       
@@ -447,19 +286,11 @@ const handleSubmit = async () => {
       
       const updateData: StudentFormData = {
         username: formData.username,
-        studentNumber: formData.studentNumber,
+        studentId: formData.studentId,  // 修复：使用 studentId 与后端保持一致
         realName: formData.realName,
         email: formData.email,
         phone: formData.phone,
-        college: formData.college,
-        major: formData.major,
-        grade: formData.grade,
-        className: formData.className,
-        gender: formData.gender as 'MALE' | 'FEMALE',
-        birthDate: formData.birthDate,
-        idCard: formData.idCard,
-        address: formData.address,
-        bio: formData.bio
+        status: formData.status
       }
       
       await studentStore.updateStudent(props.student.id, updateData)

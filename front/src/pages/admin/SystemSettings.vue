@@ -559,9 +559,23 @@ const notificationFilter = reactive<NotificationFilter>({
 const api = {
   // 获取系统日志
   getLogs: async (params: any): Promise<LogResponse> => {
-    const response = await request.get('/api/admin/logs', params)
-    // 后端直接返回LogResponse格式的数据
-    return response as unknown as LogResponse
+    const response = await request.get('/api/admin/logs', params) as any
+    console.log('📋 getLogs原始响应:', response)
+
+    // 检查响应格式并提取数据
+    // 如果响应包含success字段，说明被包装了
+    if (response && typeof response === 'object') {
+      if ('success' in response && response.success && response.data) {
+        console.log('📋 从success.data中提取日志数据:', response.data)
+        return response.data as LogResponse
+      }
+      // 否则直接返回响应
+      console.log('📋 直接返回日志响应数据')
+      return response as LogResponse
+    }
+
+    // 如果没有数据，返回空结构
+    return { logs: [], totalElements: 0, totalPages: 0, currentPage: 0, size: 0 }
   },
   // 获取日志统计
   getLogStats: () => {
@@ -621,14 +635,64 @@ const fetchLogs = async () => {
       level: logFilter.level || undefined,
       keyword: logFilter.keyword || undefined
     }
-    
+
+    console.log('📋 正在获取日志，请求参数:', params)
+
     const response = await api.getLogs(params)
-    
-    // 后端返回的数据格式是 {logs: [...], totalElements: number}
-    logs.value = response.logs || []
-    logTotal.value = response.totalElements || 0
+
+    console.log('📋 日志API响应完整数据:', response)
+    console.log('📋 响应数据类型:', typeof response)
+    console.log('📋 响应数据的所有键:', Object.keys(response))
+
+    // 尝试多种可能的数据结构
+    let logData: any[] = []
+    let totalCount = 0
+
+    const resp = response as any
+
+    if (resp.logs) {
+      // 情况1: {logs: [...], totalElements: ...}
+      logData = resp.logs
+      totalCount = resp.totalElements || 0
+      console.log('📋 情况1: 从response.logs获取数据')
+    } else if (resp.content) {
+      // 情况2: Spring分页格式 {content: [...], totalElements: ...}
+      logData = resp.content
+      totalCount = resp.totalElements || 0
+      console.log('📋 情况2: 从response.content获取数据')
+    } else if (Array.isArray(resp)) {
+      // 情况3: 直接返回数组
+      logData = resp
+      totalCount = resp.length
+      console.log('📋 情况3: 响应直接是数组')
+    } else if (resp.data) {
+      // 情况4: 嵌套在data中
+      if (resp.data.logs) {
+        logData = resp.data.logs
+        totalCount = resp.data.totalElements || 0
+      } else if (resp.data.content) {
+        logData = resp.data.content
+        totalCount = resp.data.totalElements || 0
+      } else if (Array.isArray(resp.data)) {
+        logData = resp.data
+        totalCount = resp.data.length
+      }
+      console.log('📋 情况4: 从response.data中提取数据')
+    }
+
+    console.log('📋 最终提取的日志数据:', logData)
+    console.log('📋 日志数据长度:', logData.length)
+    console.log('📋 总数:', totalCount)
+
+    // 设置到组件
+    logs.value = logData
+    logTotal.value = totalCount
+
+    console.log('📋 设置后logs.value:', logs.value)
+    console.log('📋 设置后logs.value.length:', logs.value.length)
+    console.log('📋 设置后logTotal.value:', logTotal.value)
   } catch (error: any) {
-    console.error('获取日志失败:', error)
+    console.error('❌ 获取日志失败:', error)
     ElMessage.error(error.message || '获取日志失败')
   } finally {
     logLoading.value = false
@@ -638,29 +702,42 @@ const fetchLogs = async () => {
 // 获取系统统计信息
 const fetchSystemStats = async () => {
   try {
+    console.log('📊 正在获取系统统计信息...')
     const response = await api.getSystemStatus()
-    
+
+    console.log('📊 系统状态API响应:', response)
+
     // 后端返回的数据格式是 {success: true, data: {...}}
     if (response.success && response.data) {
       const data = response.data
-      
+
+      console.log('📊 系统状态数据:', data)
+
       // 更新系统统计信息
       systemStats.uptime = formatUptime(data.uptime)
       systemStats.version = `${data.javaVersion} (${data.osName} ${data.osVersion})`
-      
+
       // 从日志统计接口获取日志相关数据
       try {
+        console.log('📊 正在获取日志统计...')
         const logStatsResponse = await api.getLogStats()
+
+        console.log('📊 日志统计API响应:', logStatsResponse)
+        console.log('📊 日志统计数据:', logStatsResponse.data)
+
         systemStats.todayLogs = logStatsResponse.data?.todayLogs || 0
         systemStats.errorLogs = logStatsResponse.data?.errorLogs || 0
+
+        console.log('📊 今日日志数:', systemStats.todayLogs)
+        console.log('📊 错误日志数:', systemStats.errorLogs)
       } catch (logError) {
-        console.error('获取日志统计失败:', logError)
+        console.error('❌ 获取日志统计失败:', logError)
         systemStats.todayLogs = 0
         systemStats.errorLogs = 0
       }
     }
   } catch (error: any) {
-    console.error('获取系统统计失败:', error)
+    console.error('❌ 获取系统统计失败:', error)
     // 发生错误时保持初始状态，不显示模拟数据
   }
 }
@@ -670,12 +747,20 @@ const fetchSystemStats = async () => {
 // 获取日志级别列表
 const fetchLogLevels = async () => {
   try {
+    console.log('🏷️ 正在获取日志级别列表...')
     const response = await api.getLogLevels()
+
+    console.log('🏷️ 日志级别API响应:', response)
+    console.log('🏷️ 日志级别数据:', response.data)
+
     logLevels.value = response.data || []
+
+    console.log('🏷️ 设置到组件的日志级别:', logLevels.value)
   } catch (error: any) {
-    console.error('获取日志级别失败:', error)
+    console.error('❌ 获取日志级别失败:', error)
     // 发生错误时使用默认级别
     logLevels.value = ['ALL', 'ERROR', 'WARN', 'INFO', 'DEBUG', 'TRACE']
+    console.log('🏷️ 使用默认日志级别:', logLevels.value)
   }
 }
 

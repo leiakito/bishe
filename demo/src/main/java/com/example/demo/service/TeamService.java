@@ -93,10 +93,11 @@ public class TeamService {
     public Optional<Team> findById(Long id) {
         return teamRepository.findById(id);
     }
-    
+
     // 获取所有团队（分页）
     public Page<Team> getAllTeams(Pageable pageable) {
-        return teamRepository.findAll(pageable);
+        // 使用自定义查询来加载关联的 competition 和 leader 数据
+        return teamRepository.findAllWithDetails(pageable);
     }
     
     // 根据竞赛获取团队
@@ -139,11 +140,17 @@ public class TeamService {
     
     // 获取未满员的团队
     public List<Team> getAvailableTeams(Long competitionId) {
-        Optional<Competition> competitionOpt = competitionRepository.findById(competitionId);
-        if (competitionOpt.isEmpty()) {
-            throw new RuntimeException("竞赛不存在");
+        if (competitionId != null) {
+            Optional<Competition> competitionOpt = competitionRepository.findById(competitionId);
+            if (competitionOpt.isEmpty()) {
+                throw new RuntimeException("竞赛不存在");
+            }
+            // 使用带关联数据的查询方法
+            return teamRepository.findAvailableTeamsInCompetitionWithDetails(competitionId);
+        } else {
+            // 如果没有指定竞赛ID，返回所有可用团队
+            return teamRepository.findAllAvailableTeamsWithDetails();
         }
-        return teamRepository.findAvailableTeamsInCompetition(competitionOpt.get().getId());
     }
     
     // 申请加入团队
@@ -578,32 +585,45 @@ public class TeamService {
     
     // 通过邀请码加入团队
     public TeamMember joinTeamByInviteCode(String inviteCode, Long userId, String reason) {
-        // 验证邀请码
+        // 严格的邀请码验证和过滤
         if (inviteCode == null || inviteCode.trim().isEmpty()) {
             throw new RuntimeException("邀请码不能为空");
         }
-        
+
+        // 转换为大写并去除空格
+        inviteCode = inviteCode.trim().toUpperCase();
+
+        // 验证邀请码长度
+        if (inviteCode.length() < 4 || inviteCode.length() > 20) {
+            throw new RuntimeException("邀请码格式错误");
+        }
+
+        // 验证邀请码只包含字母数字和连字符
+        if (!inviteCode.matches("^[A-Z0-9-]+$")) {
+            throw new RuntimeException("邀请码格式错误，只能包含字母、数字和连字符");
+        }
+
         // 根据邀请码查找团队
-        Optional<Team> teamOpt = teamRepository.findByInviteCode(inviteCode.trim());
+        Optional<Team> teamOpt = teamRepository.findByInviteCode(inviteCode);
         if (teamOpt.isEmpty()) {
             throw new RuntimeException("无效的邀请码");
         }
-        
+
         Team team = teamOpt.get();
-        
+
         // 验证团队状态
         if (team.getStatus() != Team.TeamStatus.ACTIVE) {
             throw new RuntimeException("团队未开放招募");
         }
-        
+
         // 验证用户
         Optional<User> userOpt = userRepository.findById(userId);
         if (userOpt.isEmpty()) {
             throw new RuntimeException("用户不存在");
         }
-        
+
         User user = userOpt.get();
-        
+
         // 检查用户是否已经在该团队中
         Optional<TeamMember> existingMember = teamMemberRepository.findByTeamIdAndUserId(team.getId(), userId);
         if (existingMember.isPresent()) {

@@ -13,7 +13,16 @@ import java.util.Optional;
 
 @Repository
 public interface TeamRepository extends JpaRepository<Team, Long> {
-    
+
+    // 获取所有团队（带关联数据）
+    @Query("SELECT DISTINCT t FROM Team t LEFT JOIN FETCH t.competition LEFT JOIN FETCH t.leader")
+    List<Team> findAllWithDetails();
+
+    // 获取所有团队（分页，带关联数据）
+    @Query(value = "SELECT DISTINCT t FROM Team t LEFT JOIN FETCH t.competition LEFT JOIN FETCH t.leader",
+           countQuery = "SELECT COUNT(DISTINCT t) FROM Team t")
+    Page<Team> findAllWithDetails(Pageable pageable);
+
     // 根据团队名称查找
     Optional<Team> findByName(String name);
     
@@ -71,6 +80,14 @@ public interface TeamRepository extends JpaRepository<Team, Long> {
     // 查找特定竞赛中未满员的团队
     @Query("SELECT t FROM Team t LEFT JOIN t.members tm WHERE t.competition.id = :competitionId GROUP BY t HAVING COUNT(tm) < t.maxMembers")
     List<Team> findAvailableTeamsInCompetition(@Param("competitionId") Long competitionId);
+
+    // 查找未满员的团队（带关联数据）
+    @Query("SELECT DISTINCT t FROM Team t LEFT JOIN FETCH t.competition LEFT JOIN FETCH t.leader LEFT JOIN t.members tm WHERE t.competition.id = :competitionId GROUP BY t.id HAVING COUNT(tm) < t.maxMembers OR t.currentMembers < t.maxMembers")
+    List<Team> findAvailableTeamsInCompetitionWithDetails(@Param("competitionId") Long competitionId);
+
+    // 查找所有未满员的团队（带关联数据）
+    @Query("SELECT DISTINCT t FROM Team t LEFT JOIN FETCH t.competition LEFT JOIN FETCH t.leader WHERE t.currentMembers < t.maxMembers AND t.status = 'ACTIVE'")
+    List<Team> findAllAvailableTeamsWithDetails();
     
     // 统计各状态团队数量
     @Query("SELECT t.status, COUNT(t) FROM Team t GROUP BY t.status")

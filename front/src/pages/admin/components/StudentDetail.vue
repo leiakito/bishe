@@ -25,7 +25,7 @@
                 <el-icon class="mr-1">
                   <IdCard />
                 </el-icon>
-                {{ student.studentNumber }}
+                {{ student.studentId }}
               </el-tag>
               <el-tag :type="student.status === 'APPROVED' ? 'success' : 'danger'" size="large">
               <el-icon class="mr-1">
@@ -46,14 +46,9 @@
                 <el-icon class="mr-2 text-blue-500">
                   <School />
                 </el-icon>
-                <span>{{ student.college || '未设置学院' }}</span>
+                <span>{{ student.schoolName || '未设置学校' }}</span>
               </div>
-              <div class="flex items-center">
-                <el-icon class="mr-2 text-green-500">
-                  <Calendar />
-                </el-icon>
-                <span>{{ student.grade || '未设置年级' }}级</span>
-              </div>
+
             </div>
           </div>
         </div>
@@ -85,55 +80,18 @@
                       <label>注册时间</label>
                       <span>{{ formatDateTime(student.createdAt) }}</span>
                     </div>
-                    <div class="info-item">
-                      <label>最后登录</label>
-                      <span>{{ formatDateTime(student.lastLoginAt) }}</span>
-                    </div>
+
                   </div>
                 </div>
                 
                 <div class="info-group">
                   <h3 class="group-title">个人信息</h3>
                   <div class="info-items">
-                    <div class="info-item">
-                      <label>性别</label>
-                      <span>
-                        <el-tag
-                          v-if="(student as any).gender"
-                          :type="(student as any).gender === 'MALE' ? 'primary' : (student as any).gender === 'FEMALE' ? 'danger' : 'info'"
-                          size="small"
-                        >
-                          {{ getGenderText((student as any).gender) }}
-                        </el-tag>
-                        <span v-else>-</span>
-                      </span>
-                    </div>
-                    <div class="info-item">
-                      <label>出生日期</label>
-                      <span>{{ formatDate((student as any).birthDate) }}</span>
-                    </div>
-                    <div class="info-item">
-                      <label>身份证号</label>
-                      <div class="flex items-center space-x-2">
-                        <Postcard />
-                        <span class="font-mono">{{ maskIdCard((student as any).idCard) }}</span>
-                      </div>
-                    </div>
-                    <div class="info-item">
-                      <label>家庭住址</label>
-                      <span>{{ (student as any).address || '-' }}</span>
-                    </div>
                   </div>
                 </div>
               </div>
               
-              <!-- 个人简介 -->
-              <div class="info-group mt-6" v-if="student.bio">
-                <h3 class="group-title">个人简介</h3>
-                <div class="bio-content bg-gray-50 rounded-lg p-4">
-                  <p class="text-gray-700 leading-relaxed">{{ student.bio }}</p>
-                </div>
-              </div>
+
             </div>
           </el-tab-pane>
           
@@ -146,24 +104,14 @@
                   <div class="info-items">
                     <div class="info-item">
                       <label>学号</label>
-                      <span class="font-mono text-blue-600 font-semibold">{{ student.studentNumber }}</span>
+                      <span class="font-mono text-blue-600 font-semibold">{{ student.studentId }}</span>
                     </div>
                     <div class="info-item">
-                      <label>学院</label>
-                      <span>{{ student.college || '-' }}</span>
+                      <label>学校</label>
+                      <span>{{ student.schoolName || '-' }}</span>
                     </div>
-                    <div class="info-item">
-                      <label>专业</label>
-                      <span>{{ student.major || '-' }}</span>
-                    </div>
-                    <div class="info-item">
-                      <label>年级</label>
-                      <span>{{ student.grade || '-' }}级</span>
-                    </div>
-                    <div class="info-item">
-                      <label>班级</label>
-                      <span>{{ student.className || '-' }}</span>
-                    </div>
+
+
                   </div>
                 </div>
                 
@@ -178,14 +126,7 @@
                         </el-tag>
                       </span>
                     </div>
-                    <div class="info-item">
-                      <label>入学时间</label>
-                      <span>{{ getEnrollmentDate(student.grade) }}</span>
-                    </div>
-                    <div class="info-item">
-                      <label>预计毕业</label>
-                      <span>{{ getGraduationDate(student.grade) }}</span>
-                    </div>
+
                   </div>
                 </div>
               </div>
@@ -322,16 +263,7 @@ const maskIdCard = (idCard?: string) => {
   return idCard.substring(0, 6) + '****' + idCard.substring(idCard.length - 4)
 }
 
-const getEnrollmentDate = (grade?: string) => {
-  if (!grade) return '-'
-  return `${grade}年9月`
-}
 
-const getGraduationDate = (grade?: string) => {
-  if (!grade) return '-'
-  const graduationYear = parseInt(grade) + 4
-  return `${graduationYear}年6月`
-}
 
 const handleClose = () => {
   visible.value = false

@@ -21,7 +21,9 @@ public class TeamDTO {
     public TeamDTO() {}
 
     public TeamDTO(Team team) {
-        System.out.println("创建TeamDTO，team.id=" + team.getId());
+        System.out.println("=== 创建TeamDTO ===");
+        System.out.println("Team ID: " + team.getId());
+        System.out.println("Team Name: " + team.getName());
 
         this.id = team.getId();
         this.name = team.getName();
@@ -35,32 +37,52 @@ public class TeamDTO {
 
         // 手动构建 competition 对象
         try {
+            System.out.println("尝试加载 competition...");
             if (team.getCompetition() != null) {
+                System.out.println("Competition 不为空");
                 this.competition = new HashMap<>();
                 this.competition.put("id", team.getCompetition().getId());
                 this.competition.put("name", team.getCompetition().getName());
-                System.out.println("Competition已加载: " + team.getCompetition().getName());
+                System.out.println("Competition 已加载: ID=" + team.getCompetition().getId() + ", Name=" + team.getCompetition().getName());
+            } else {
+                System.out.println("警告: Competition 为 null!");
+                this.competition = null;
             }
-        } catch (Exception e) {
-            System.err.println("加载competition失败: " + e.getMessage());
+        } catch (org.hibernate.LazyInitializationException e) {
+            System.err.println("LazyInitializationException: Competition 未被加载（延迟加载异常）");
             e.printStackTrace();
+            this.competition = null;
+        } catch (Exception e) {
+            System.err.println("加载 competition 失败: " + e.getClass().getName() + " - " + e.getMessage());
+            e.printStackTrace();
+            this.competition = null;
         }
 
         // 手动构建 leader 对象
         try {
+            System.out.println("尝试加载 leader...");
             if (team.getLeader() != null) {
+                System.out.println("Leader 不为空");
                 this.leader = new HashMap<>();
                 this.leader.put("id", team.getLeader().getId());
                 this.leader.put("username", team.getLeader().getUsername());
                 this.leader.put("realName", team.getLeader().getRealName());
-                System.out.println("Leader已加载: " + team.getLeader().getUsername());
+                System.out.println("Leader 已加载: ID=" + team.getLeader().getId() + ", Username=" + team.getLeader().getUsername());
+            } else {
+                System.out.println("警告: Leader 为 null!");
+                this.leader = null;
             }
-        } catch (Exception e) {
-            System.err.println("加载leader失败: " + e.getMessage());
+        } catch (org.hibernate.LazyInitializationException e) {
+            System.err.println("LazyInitializationException: Leader 未被加载（延迟加载异常）");
             e.printStackTrace();
+            this.leader = null;
+        } catch (Exception e) {
+            System.err.println("加载 leader 失败: " + e.getClass().getName() + " - " + e.getMessage());
+            e.printStackTrace();
+            this.leader = null;
         }
 
-        System.out.println("TeamDTO创建完成");
+        System.out.println("TeamDTO 创建完成: competition=" + (this.competition != null ? "已加载" : "null") + ", leader=" + (this.leader != null ? "已加载" : "null"));
     }
 
     // Getters and Setters

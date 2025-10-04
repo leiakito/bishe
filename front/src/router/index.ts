@@ -97,6 +97,16 @@ const routes: RouteRecordRaw[] = [
         }
       },
       {
+        path: 'teams/:id',
+        name: 'TeamDetail',
+        component: () => import('@/pages/user/TeamDetail.vue'),
+        meta: {
+          title: '团队详情',
+          requiresAuth: true,
+          hideInMenu: true
+        }
+      },
+      {
         path: 'profile',
         name: 'Profile',
         component: () => import('@/pages/user/Profile.vue'),

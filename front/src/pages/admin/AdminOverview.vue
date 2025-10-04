@@ -217,7 +217,7 @@ import {
   InfoFilled,
   Setting
 } from '@element-plus/icons-vue'
-import { getSystemNotices, type SystemNotice } from '@/api'
+import { getSystemNotices, getUserStats, getCompetitionStats, getLogStats, type SystemNotice } from '@/api'
 
 // 响应式数据
 const loading = ref(false)
@@ -347,14 +347,60 @@ const formatTime = (date: Date) => {
 const fetchAdminDashboardData = async () => {
   try {
     loading.value = true
-    // 这里可以调用API获取管理员仪表盘数据
-    // 模拟管理员数据
-    stats.value = {
-      totalUsers: 2856,
-      onlineUsers: 342,
-      totalCompetitions: 25,
-      systemLogs: 1024
+    
+    // 初始化默认值
+    const defaultStats = {
+      totalUsers: 0,
+      onlineUsers: Math.floor(Math.random() * 500) + 200, // 在线用户继续使用模拟数据
+      totalCompetitions: 0,
+      systemLogs: 0
     }
+    
+    // 并行获取各项统计数据
+    const [userStatsResult, competitionStatsResult, logStatsResult] = await Promise.allSettled([
+      getUserStats(),
+      getCompetitionStats(),
+      getLogStats()
+    ])
+    
+    // 处理用户统计数据
+    if (userStatsResult.status === 'fulfilled') {
+      try {
+        const userStatsData = userStatsResult.value?.data || userStatsResult.value
+        defaultStats.totalUsers = userStatsData?.totalUsers || userStatsData?.total || 0
+      } catch (error) {
+        console.warn('解析用户统计数据失败:', error)
+      }
+    } else {
+      console.error('获取用户统计失败:', userStatsResult.reason)
+    }
+    
+    // 处理竞赛统计数据
+    if (competitionStatsResult.status === 'fulfilled') {
+      try {
+        const competitionStatsData = competitionStatsResult.value?.data || competitionStatsResult.value
+        defaultStats.totalCompetitions = competitionStatsData?.totalCompetitions || competitionStatsData?.total || 0
+      } catch (error) {
+        console.warn('解析竞赛统计数据失败:', error)
+      }
+    } else {
+      console.error('获取竞赛统计失败:', competitionStatsResult.reason)
+    }
+    
+    // 处理日志统计数据
+    if (logStatsResult.status === 'fulfilled') {
+      try {
+        const logStatsData = logStatsResult.value?.data || logStatsResult.value
+        defaultStats.systemLogs = logStatsData?.totalLogs || logStatsData?.total || 0
+      } catch (error) {
+        console.warn('解析日志统计数据失败:', error)
+      }
+    } else {
+      console.error('获取日志统计失败:', logStatsResult.reason)
+    }
+    
+    stats.value = defaultStats
+    
   } catch (error) {
     console.error('获取管理员仪表盘数据失败:', error)
     ElMessage.error('获取管理员仪表盘数据失败，请刷新页面重试')
@@ -362,7 +408,7 @@ const fetchAdminDashboardData = async () => {
     // 设置默认值，避免页面空白
     stats.value = {
       totalUsers: 0,
-      onlineUsers: 0,
+      onlineUsers: Math.floor(Math.random() * 500) + 200, // 在线用户继续使用模拟数据
       totalCompetitions: 0,
       systemLogs: 0
     }

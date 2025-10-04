@@ -32,3 +32,18 @@ export const deleteSystemNotice = (id: number) => {
 export const getAdminStats = () => {
   return request.get('/api/admin/stats')
 }
+
+// 获取用户统计信息
+export const getUserStats = () => {
+  return request.get('/api/admin/users/stats')
+}
+
+// 获取竞赛统计信息
+export const getCompetitionStats = () => {
+  return request.get('/api/competitions/stats')
+}
+
+// 获取系统日志统计信息
+export const getLogStats = () => {
+  return request.get('/api/admin/logs/stats')
+}

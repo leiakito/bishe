@@ -78,6 +78,9 @@ export const getAllTeams = async (params?: {
   sortDir?: string
 }) => {
   try {
+    console.log('=== getAllTeams API 调用 ===')
+    console.log('请求参数:', params)
+
     const response = await request.get<any>('/api/teams', {
       page: params?.page || 0,
       size: params?.size || 10,
@@ -85,21 +88,44 @@ export const getAllTeams = async (params?: {
       sortDir: params?.sortDir || 'desc'
     })
 
-    const responseData = response.data || response
+    console.log('=== getAllTeams API 响应 ===')
+    console.log('原始响应:', response)
+    console.log('响应类型:', typeof response)
+    console.log('响应键:', Object.keys(response))
+
+    // 响应拦截器已经返回了完整对象 { success, data, totalElements, ... }
+    // 不需要再次访问 response.data
+    const success = response.success !== false
+    const data = response.data || []
+    const totalElements = response.totalElements || 0
+    const totalPages = response.totalPages || 0
+
+    console.log('解析结果:')
+    console.log('  - success:', success)
+    console.log('  - data 数量:', data.length)
+    console.log('  - totalElements:', totalElements)
+    console.log('  - totalPages:', totalPages)
+
     return {
-      success: responseData.success !== false,
-      data: responseData.data || [],
-      totalElements: responseData.totalElements || 0,
-      totalPages: responseData.totalPages || 0,
-      currentPage: responseData.currentPage || 0,
-      size: responseData.size || params?.size || 10
+      success: success,
+      data: data,
+      totalElements: totalElements,
+      totalPages: totalPages,
+      currentPage: response.currentPage || 0,
+      size: response.size || params?.size || 10
     }
-  } catch (error) {
-    console.error('获取团队列表失败:', error)
+  } catch (error: any) {
+    console.error('=== getAllTeams API 错误 ===')
+    console.error('错误详情:', error)
+    console.error('错误响应:', error.response)
+    console.error('错误消息:', error.message)
+
     return {
       success: false,
-      message: '获取团队列表失败',
-      data: []
+      message: error.message || '获取团队列表失败',
+      data: [],
+      totalElements: 0,
+      totalPages: 0
     }
   }
 }
@@ -298,6 +324,10 @@ export const getAvailableTeams = async (
   params?: { page?: number; size?: number }
 ) => {
   try {
+    console.log('=== getAvailableTeams API 调用 ===')
+    console.log('竞赛ID:', competitionId)
+    console.log('请求参数:', params)
+
     const queryParams: any = {
       page: params?.page || 0,
       size: params?.size || 10
@@ -309,19 +339,41 @@ export const getAvailableTeams = async (
 
     const response = await request.get<any>('/api/teams/available', queryParams)
 
-    const responseData = response.data || response
+    console.log('=== getAvailableTeams API 响应 ===')
+    console.log('原始响应:', response)
+    console.log('响应类型:', typeof response)
+    console.log('响应键:', Object.keys(response))
+
+    // 响应拦截器已经返回了完整对象 { success, data, totalElements, ... }
+    const success = response.success !== false
+    const data = response.data || []
+    const totalElements = response.totalElements || 0
+    const totalPages = response.totalPages || 0
+
+    console.log('解析结果:')
+    console.log('  - success:', success)
+    console.log('  - data 数量:', data.length)
+    console.log('  - totalElements:', totalElements)
+    console.log('  - totalPages:', totalPages)
+
     return {
-      success: responseData.success !== false,
-      data: responseData.data || [],
-      totalElements: responseData.totalElements || 0,
-      totalPages: responseData.totalPages || 0
+      success: success,
+      data: data,
+      totalElements: totalElements,
+      totalPages: totalPages
     }
-  } catch (error) {
-    console.error('获取可加入团队失败:', error)
+  } catch (error: any) {
+    console.error('=== getAvailableTeams API 错误 ===')
+    console.error('错误详情:', error)
+    console.error('错误响应:', error.response)
+    console.error('错误消息:', error.message)
+
     return {
       success: false,
-      message: '获取可加入团队失败',
-      data: []
+      message: error.message || '获取可加入团队失败',
+      data: [],
+      totalElements: 0,
+      totalPages: 0
     }
   }
 }
@@ -684,10 +736,78 @@ export const joinTeamByInviteCode = async (
   reason?: string
 ) => {
   try {
+    // 严格的类型校验和参数过滤
+    if (typeof inviteCode !== 'string') {
+      return {
+        success: false,
+        message: '邀请码参数类型错误，必须是字符串',
+        data: null
+      }
+    }
+
+    // 去除空格并转换为大写
+    const sanitizedInviteCode = inviteCode.trim().toUpperCase()
+
+    // 验证邀请码不为空
+    if (sanitizedInviteCode.length === 0) {
+      return {
+        success: false,
+        message: '邀请码不能为空',
+        data: null
+      }
+    }
+
+    // 验证邀请码长度
+    if (sanitizedInviteCode.length < 4 || sanitizedInviteCode.length > 20) {
+      return {
+        success: false,
+        message: '邀请码长度必须在4-20个字符之间',
+        data: null
+      }
+    }
+
+    // 验证邀请码格式（只允许字母、数字和连字符）
+    if (!/^[A-Z0-9-]+$/.test(sanitizedInviteCode)) {
+      return {
+        success: false,
+        message: '邀请码只能包含字母、数字和连字符',
+        data: null
+      }
+    }
+
+    // 验证 userId 类型
+    if (typeof userId !== 'number' || isNaN(userId) || userId <= 0) {
+      return {
+        success: false,
+        message: '用户ID参数错误',
+        data: null
+      }
+    }
+
+    // 验证 reason 类型和长度
+    let sanitizedReason = reason
+    if (reason !== undefined && reason !== null) {
+      if (typeof reason !== 'string') {
+        return {
+          success: false,
+          message: '申请理由参数类型错误，必须是字符串',
+          data: null
+        }
+      }
+      sanitizedReason = reason.trim()
+      if (sanitizedReason.length > 500) {
+        return {
+          success: false,
+          message: '申请理由不能超过500个字符',
+          data: null
+        }
+      }
+    }
+
     const response = await request.post<any>('/api/teams/join-by-code', {
-      inviteCode,
-      userId,
-      reason
+      inviteCode: sanitizedInviteCode,
+      userId: userId,
+      reason: sanitizedReason
     })
 
     const responseData = response.data || response
@@ -709,15 +829,36 @@ export const joinTeamByInviteCode = async (
 // 获取团队邀请码
 export const getTeamInviteCode = async (id: number, userId: number) => {
   try {
+    console.log('=== 获取邀请码 API 调用 ===')
+    console.log('团队ID:', id)
+    console.log('用户ID:', userId)
+
     const response = await request.get<any>(`/api/teams/${id}/invite-code`, {
       userId
     })
 
-    const responseData = response.data || response
+    console.log('=== 获取邀请码 API 响应 ===')
+    console.log('原始响应:', response)
+    console.log('响应类型:', typeof response)
+    console.log('响应键:', Object.keys(response))
+
+    // 响应拦截器已经返回了完整对象 { success, data, message }
+    // 不需要再次访问 response.data
+    const success = response.success !== false
+    const inviteCodeData = response.data || {}
+    const inviteCode = inviteCodeData.inviteCode || ''
+
+    console.log('解析结果:')
+    console.log('  - success:', success)
+    console.log('  - inviteCodeData:', inviteCodeData)
+    console.log('  - inviteCode:', inviteCode)
+
     return {
-      success: responseData.success !== false,
-      data: responseData.data || { inviteCode: '' },
-      message: responseData.message || 'success'
+      success: success,
+      data: {
+        inviteCode: inviteCode
+      },
+      message: response.message || 'success'
     }
   } catch (error) {
     console.error('获取邀请码失败:', error)

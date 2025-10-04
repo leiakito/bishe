@@ -2,9 +2,40 @@
   <div class="min-h-screen bg-gray-50 p-6">
     <!-- 页面头部 -->
     <div class="mb-8">
-      <h1 class="text-3xl font-bold text-gray-900 mb-2">我的团队</h1>
-      <p class="text-gray-600">管理和查看您参与的竞赛团队</p>
+      <h1 class="text-3xl font-bold text-gray-900 mb-2">团队管理</h1>
+      <p class="text-gray-600">管理和浏览竞赛团队</p>
     </div>
+
+    <!-- 标签页切换 -->
+    <div class="mb-6">
+      <el-tabs v-model="activeTab" @tab-change="handleTabChange">
+        <el-tab-pane label="我的团队" name="myTeams">
+          <template #label>
+            <span class="flex items-center">
+              <el-icon class="mr-2"><User /></el-icon>
+              我的团队
+            </span>
+          </template>
+        </el-tab-pane>
+        <el-tab-pane label="所有团队" name="allTeams">
+          <template #label>
+            <span class="flex items-center">
+              <el-icon class="mr-2"><Grid /></el-icon>
+              所有团队
+            </span>
+          </template>
+        </el-tab-pane>
+        <el-tab-pane label="可加入团队" name="availableTeams">
+          <template #label>
+            <span class="flex items-center">
+              <el-icon class="mr-2"><CirclePlus /></el-icon>
+              可加入团队
+            </span>
+          </template>
+        </el-tab-pane>
+      </el-tabs>
+    </div>
+
     <!-- 统计卡片 -->
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
       <div class="bg-white rounded-lg shadow-sm p-6 border border-gray-200">
@@ -117,9 +148,27 @@
           刷新
         </el-button>
       </div>
-      
+
       <div class="text-sm text-gray-600">
         共 {{ totalElements }} 个团队
+      </div>
+    </div>
+
+    <!-- 调试信息面板 (开发环境) -->
+    <div v-if="teams.length === 0 && !loading" class="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-6">
+      <div class="flex items-start">
+        <el-icon class="text-yellow-600 mt-1 mr-3" size="20"><Warning /></el-icon>
+        <div class="flex-1">
+          <h4 class="font-medium text-yellow-800 mb-2">调试信息</h4>
+          <div class="text-sm text-yellow-700 space-y-1">
+            <p>• 当前标签页: <strong>{{ activeTab }}</strong></p>
+            <p>• 用户ID: <strong>{{ currentUserId || '未登录' }}</strong></p>
+            <p>• 认证状态: <strong>{{ authStore.token ? '已登录' : '未登录' }}</strong></p>
+            <p>• 数据数量: <strong>{{ teams.length }}</strong></p>
+            <p>• 总数据量: <strong>{{ totalElements }}</strong></p>
+            <p class="mt-2 text-yellow-600">请检查浏览器控制台查看详细的API调用日志</p>
+          </div>
+        </div>
       </div>
     </div>
 
@@ -189,8 +238,8 @@
                 查看详情
               </el-button>
 
-              <!-- 下拉菜单选择 -->
-              <el-dropdown @command="(cmd: string) => handleTeamCommand(cmd, team)">
+              <!-- 我的团队标签页 - 显示完整管理功能 -->
+              <el-dropdown v-if="activeTab === 'myTeams'" @command="(cmd: string) => handleTeamCommand(cmd, team)">
                 <el-button type="default" size="small">
                   <el-icon><Plus /></el-icon>
                   更多
@@ -206,6 +255,18 @@
                   </el-dropdown-menu>
                 </template>
               </el-dropdown>
+
+              <!-- 所有团队/可加入团队标签页 - 只显示加入功能 -->
+              <el-button
+                v-else-if="activeTab === 'allTeams' || activeTab === 'availableTeams'"
+                type="success"
+                size="small"
+                @click="quickJoinTeam(team)"
+                :disabled="isAlreadyInTeam(team)"
+              >
+                <el-icon><User /></el-icon>
+                {{ isAlreadyInTeam(team) ? '已加入' : '申请加入' }}
+              </el-button>
             </div>
           </div>
         </div>
@@ -337,21 +398,31 @@
       title="团队邀请码"
       width="400px"
       :close-on-click-modal="false"
+      @open="() => console.log('对话框打开，当前邀请码:', currentInviteCode)"
     >
       <div class="text-center py-4">
         <div class="mb-4">
           <h3 class="text-lg font-medium mb-2">分享邀请码</h3>
           <p class="text-gray-600 text-sm">将邀请码分享给其他用户，他们可以通过此码加入团队</p>
         </div>
-        
+
         <div class="bg-gray-50 rounded-lg p-4 mb-4">
           <div class="text-sm text-gray-500 mb-2">邀请码</div>
           <div class="text-xl font-mono font-bold text-blue-600">
-            {{ currentInviteCode }}
+            {{ currentInviteCode || '加载中...' }}
+          </div>
+          <!-- 调试信息 -->
+          <div v-if="!currentInviteCode" class="text-xs text-red-500 mt-2">
+            邀请码为空，请检查控制台日志
           </div>
         </div>
-        
-        <el-button type="primary" @click="copyInviteCode" class="w-full">
+
+        <el-button
+          type="primary"
+          @click="copyInviteCode"
+          class="w-full"
+          :disabled="!currentInviteCode"
+        >
           复制邀请码
         </el-button>
       </div>
@@ -423,10 +494,11 @@
 <script setup lang="ts">
 import { ref, onMounted, computed } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Search, Plus, Trophy, UserFilled, Star, CircleCheck, User, CopyDocument, Folder, Loading, ArrowDown } from '@element-plus/icons-vue'
+import { Search, Plus, Trophy, UserFilled, Star, CircleCheck, User, CopyDocument, Folder, Loading, ArrowDown, Grid, CirclePlus, Warning } from '@element-plus/icons-vue'
 import { useAuthStore } from '@/stores/auth'
 import * as teamApi from '@/api/team'
 import * as competitionApi from '@/api/competition'
+import { useRouter } from 'vue-router'  
 
 interface Team {
   id: number
@@ -450,6 +522,9 @@ interface Competition {
 const authStore = useAuthStore()
 const currentUserId = computed(() => authStore.user?.id)
 
+// 标签页状态
+const activeTab = ref('myTeams')
+
 // 数据状态
 const teams = ref<Team[]>([])
 const loading = ref(false)
@@ -472,7 +547,6 @@ const stats = ref({
 const createDialogVisible = ref(false)
 const editDialogVisible = ref(false)
 const joinDialogVisible = ref(false)
-const inviteCodeDialogVisible = ref(false)
 const submitting = ref(false)
 
 // 竞赛列表
@@ -516,7 +590,18 @@ const editRules = {
 
 const joinRules = {
   inviteCode: [
-    { required: true, message: '请输入邀请码', trigger: 'blur' }
+    { required: true, message: '请输入邀请码', trigger: 'blur' },
+    {
+      min: 4,
+      max: 20,
+      message: '邀请码长度必须在4-20个字符之间',
+      trigger: 'blur'
+    },
+    {
+      pattern: /^[A-Za-z0-9-]+$/,
+      message: '邀请码只能包含字母、数字和连字符',
+      trigger: 'blur'
+    }
   ]
 }
 const createRules = {
@@ -533,14 +618,58 @@ const createRules = {
 const loadTeams = async () => {
   loading.value = true
   try {
+    // 检查用户认证状态
+    if (!currentUserId.value) {
+      console.error('=== 用户未登录 ===')
+      ElMessage.error('请先登录')
+      loading.value = false
+      return
+    }
+
+    console.log('=== 加载团队列表 ===')
+    console.log('当前用户ID:', currentUserId.value)
+    console.log('当前标签页:', activeTab.value)
+    console.log('认证Token:', authStore.token ? '已设置' : '未设置')
+
     const params: any = {
       page: currentPage.value - 1,
       size: pageSize.value
     }
 
-    console.log('加载团队列表，参数:', params)
-    const response = await teamApi.getMyTeams(params)
-    console.log('团队列表响应:', response)
+    console.log('请求参数:', params)
+
+    let response: any
+
+    // 根据不同的标签页调用不同的API
+    switch (activeTab.value) {
+      case 'myTeams':
+        // 我的团队 - 只显示当前用户参与的团队
+        console.log('调用 API: getMyTeams')
+        response = await teamApi.getMyTeams(params)
+        break
+
+      case 'allTeams':
+        // 所有团队 - 显示系统中的所有团队
+        console.log('调用 API: getAllTeams')
+        response = await teamApi.getAllTeams(params)
+        break
+
+      case 'availableTeams':
+        // 可加入团队 - 显示未满员且用户未加入的团队
+        console.log('调用 API: getAvailableTeams')
+        response = await teamApi.getAvailableTeams(undefined, params)
+        break
+
+      default:
+        console.warn('未知的标签页:', activeTab.value)
+        response = await teamApi.getMyTeams(params)
+    }
+
+    console.log('=== API 响应 ===')
+    console.log('响应对象:', response)
+    console.log('success:', response.success)
+    console.log('data:', response.data)
+    console.log('message:', response.message)
 
     if (response.success) {
       teams.value = response.data || []
@@ -548,19 +677,70 @@ const loadTeams = async () => {
       totalPages.value = response.totalPages || 0
 
       console.log('团队列表加载成功:', {
+        activeTab: activeTab.value,
         teamCount: teams.value.length,
         totalElements: totalElements.value,
         totalPages: totalPages.value
       })
 
-      // 计算统计数据
-      updateStats()
+      // 详细检查每个团队的数据
+      if (teams.value.length > 0) {
+        console.log('=== 团队数据详情 ===')
+        teams.value.forEach((team, index) => {
+          console.log(`团队 ${index + 1}:`, {
+            id: team.id,
+            name: team.name,
+            competition: team.competition,
+            competitionName: team.competition?.name,
+            leader: team.leader,
+            leaderName: team.leader?.username
+          })
+        })
+      }
+
+      // 如果数据为空，提示用户
+      if (teams.value.length === 0) {
+        console.warn('数据为空')
+        if (activeTab.value === 'allTeams') {
+          ElMessage.info('系统中暂无团队数据')
+        } else if (activeTab.value === 'availableTeams') {
+          ElMessage.info('暂无可加入的团队')
+        }
+      }
+
+      // 只在"我的团队"标签页计算统计数据
+      if (activeTab.value === 'myTeams') {
+        updateStats()
+      } else {
+        // 其他标签页清空统计数据
+        stats.value = {
+          total: teams.value.length,
+          active: teams.value.filter(t => t.status === 'ACTIVE').length,
+          leading: 0,
+          completed: teams.value.filter(t => t.status === 'COMPLETED').length
+        }
+      }
     } else {
-      console.warn('团队列表加载失败:', response.message)
+      console.error('团队列表加载失败:', response.message)
+      ElMessage.error(response.message || '加载团队列表失败')
+
+      // 如果是认证错误，清空数据
+      teams.value = []
+      totalElements.value = 0
+      totalPages.value = 0
     }
-  } catch (error) {
-    console.error('加载团队列表失败:', error)
+  } catch (error: any) {
+    console.error('=== 加载团队列表异常 ===')
+    console.error('错误对象:', error)
+    console.error('错误消息:', error.message)
+    console.error('错误堆栈:', error.stack)
+
     ElMessage.error('加载团队列表失败')
+
+    // 清空数据
+    teams.value = []
+    totalElements.value = 0
+    totalPages.value = 0
   } finally {
     loading.value = false
   }
@@ -573,6 +753,25 @@ const updateStats = () => {
   stats.value.leading = teams.value.filter(t => isLeader(t)).length
   stats.value.completed = teams.value.filter(t => t.status === 'COMPLETED').length
 }
+
+// 标签页切换处理
+const handleTabChange = (tabName: string) => {
+  console.log('=== 标签页切换 ===')
+  console.log('切换到:', tabName)
+
+  // 重置分页
+  currentPage.value = 1
+
+  // 重置搜索和筛选
+  searchKeyword.value = ''
+  filterStatus.value = ''
+
+  // 加载对应的团队数据
+  loadTeams()
+}
+
+// 路由实例
+const router = useRouter()
 
 // 加载可用竞赛
 const loadAvailableCompetitions = async () => {
@@ -736,16 +935,43 @@ const showJoinDialog = () => {
 
 // 加入团队
 const handleJoinTeam = async () => {
-  if (!joinForm.value.inviteCode.trim()) {
+  // 严格的前端验证
+  const inviteCode = joinForm.value.inviteCode.trim()
+
+  if (!inviteCode) {
     ElMessage.warning('请输入邀请码')
+    return
+  }
+
+  // 验证邀请码长度
+  if (inviteCode.length < 4 || inviteCode.length > 20) {
+    ElMessage.warning('邀请码长度必须在4-20个字符之间')
+    return
+  }
+
+  // 验证邀请码格式（只允许字母、数字和连字符）
+  if (!/^[A-Za-z0-9-]+$/.test(inviteCode)) {
+    ElMessage.warning('邀请码只能包含字母、数字和连字符')
+    return
+  }
+
+  // 验证用户ID
+  if (!currentUserId.value || currentUserId.value <= 0) {
+    ElMessage.error('用户信息无效，请重新登录')
+    return
+  }
+
+  // 验证申请理由长度
+  if (joinForm.value.reason && joinForm.value.reason.trim().length > 500) {
+    ElMessage.warning('申请理由不能超过500个字符')
     return
   }
 
   submitting.value = true
   try {
     const response = await teamApi.joinTeamByInviteCode(
-      joinForm.value.inviteCode,
-      currentUserId.value!,
+      inviteCode,
+      currentUserId.value,
       joinForm.value.reason
     )
 
@@ -767,16 +993,35 @@ const handleJoinTeam = async () => {
 // 获取邀请码
 const getInviteCode = async (team: Team) => {
   try {
+    console.log('=== 组件：开始获取邀请码 ===')
+    console.log('团队信息:', team)
+    console.log('团队ID:', team.id)
+    console.log('当前用户ID:', currentUserId.value)
+
     const response = await teamApi.getTeamInviteCode(team.id, currentUserId.value!)
 
+    console.log('=== 组件：收到API响应 ===')
+    console.log('完整响应:', response)
+    console.log('响应success:', response.success)
+    console.log('响应data:', response.data)
+    console.log('邀请码:', response.data?.inviteCode)
+
     if (response.success) {
-      currentInviteCode.value = response.data.inviteCode
-      inviteCodeDialogVisible.value = true
+      const inviteCode = response.data.inviteCode
+      console.log('=== 组件：准备显示邀请码 ===')
+      console.log('提取的邀请码:', inviteCode)
+
+      currentInviteCode.value = inviteCode
+      console.log('设置后的 currentInviteCode.value:', currentInviteCode.value)
+
+      inviteDialogVisible.value = true
+      console.log('对话框已打开')
     } else {
+      console.error('获取邀请码失败:', response.message)
       ElMessage.error(response.message || '获取邀请码失败')
     }
   } catch (error) {
-    console.error('获取邀请码失败:', error)
+    console.error('获取邀请码异常:', error)
     ElMessage.error('获取邀请码失败')
   }
 }
@@ -784,9 +1029,22 @@ const getInviteCode = async (team: Team) => {
 // 复制邀请码
 const copyInviteCode = async () => {
   try {
+    console.log('=== 复制邀请码 ===')
+    console.log('当前邀请码值:', currentInviteCode.value)
+    console.log('邀请码类型:', typeof currentInviteCode.value)
+    console.log('邀请码长度:', currentInviteCode.value?.length)
+
+    if (!currentInviteCode.value) {
+      console.error('邀请码为空，无法复制')
+      ElMessage.error('邀请码为空，无法复制')
+      return
+    }
+
     await navigator.clipboard.writeText(currentInviteCode.value)
+    console.log('邀请码已成功复制到剪贴板')
     ElMessage.success('邀请码已复制到剪贴板')
   } catch (error) {
+    console.error('复制失败:', error)
     ElMessage.error('复制失败，请手动复制')
   }
 }
@@ -847,8 +1105,7 @@ const dissolveTeam = (team: Team) => {
 
 // 查看详情
 const viewTeamDetails = (team: Team) => {
-  // TODO: 导航到详情页面
-  ElMessage.info('详情页面开发中')
+  router.push(`/dashboard/teams/${team.id}`)
 }
 
 // 成员管理
@@ -860,6 +1117,63 @@ const manageMembers = (team: Team) => {
 // 工具函数
 const isLeader = (team: Team) => {
   return team.leader?.id === currentUserId.value
+}
+
+// 检查用户是否已加入团队
+const isAlreadyInTeam = (team: Team) => {
+  // 简单检查：如果当前用户ID等于队长ID，说明已加入
+  if (team.leader?.id === currentUserId.value) {
+    return true
+  }
+  // TODO: 这里应该调用后端API检查用户是否是团队成员
+  // 暂时返回 false
+  return false
+}
+
+// 快速加入团队
+const quickJoinTeam = async (team: Team) => {
+  try {
+    console.log('快速加入团队:', team)
+
+    // 检查团队状态
+    if (team.status !== 'ACTIVE') {
+      ElMessage.warning('该团队未开放招募')
+      return
+    }
+
+    // 检查团队是否已满
+    if (team.currentMembers >= team.maxMembers) {
+      ElMessage.warning('该团队已满员')
+      return
+    }
+
+    // 确认加入
+    await ElMessageBox.confirm(
+      `确定要申请加入团队"${team.name}"吗？`,
+      '加入确认',
+      {
+        confirmButtonText: '确定',
+        cancelButtonText: '取消',
+        type: 'info'
+      }
+    )
+
+    // 调用API加入团队
+    const response = await teamApi.applyToJoinTeam(team.id, currentUserId.value!)
+
+    if (response.success) {
+      ElMessage.success('申请已提交，等待队长审核')
+      // 重新加载团队列表
+      loadTeams()
+    } else {
+      ElMessage.error(response.message || '申请失败')
+    }
+  } catch (error: any) {
+    if (error !== 'cancel') {
+      console.error('加入团队失败:', error)
+      ElMessage.error('加入团队失败')
+    }
+  }
 }
 
 // 获取状态标签类型

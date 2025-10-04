@@ -431,7 +431,7 @@ const handleRegister = async () => {
       realName: registerForm.realName.trim(),
       phone: registerForm.phoneNumber?.trim() || '',
       phoneNumber: registerForm.phoneNumber?.trim() || undefined,
-      studentNumber: registerForm.studentId.trim(),
+      studentId: registerForm.studentId.trim(),  // 修复：使用 studentId 而不是 studentNumber
       schoolName: registerForm.schoolName?.trim() || undefined,
       department: registerForm.department?.trim() || undefined,
       role: UserRole.STUDENT

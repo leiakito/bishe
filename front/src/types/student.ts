@@ -15,10 +15,6 @@ export interface StudentQueryParams {
   page?: number
   size?: number
   keyword?: string
-  college?: string
-  major?: string
-  grade?: string
-  className?: string
   // 使用正确的枚举类型
   status?: UserStatus
   role?: UserRole
@@ -37,24 +33,19 @@ export interface StudentFormData {
   email?: string
   phone?: string
   realName: string
-  studentNumber: string
-  college: string
-  major: string
-  grade: string
-  className?: string
-  gender?: 'MALE' | 'FEMALE'
-  idCard?: string
-  birthDate?: string
-  address?: string
-  emergencyContact?: string
-  emergencyPhone?: string
-  enrollmentDate?: string
-  graduationDate?: string
-  bio?: string
+  studentId: string  // 修复：使用 studentId 与后端保持一致
   status?: string  // 添加状态字段
 }
 
-// 学生统计信息
+// 后端用户统计信息原始数据结构
+export interface UserStatsResponse {
+  totalUsers: number
+  roleStats: Record<string, number>
+  statusStats: Record<string, number>
+  pendingTeachers: number
+}
+
+// 学生统计信息（前端使用）
 export interface StudentStats {
   total: number
   active: number
