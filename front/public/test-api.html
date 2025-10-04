@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>API 测试</title>
+</head>
+<body>
+    <h1>API 测试页面</h1>
+    <button onclick="testStatsAPI()">测试统计 API</button>
+    <div id="result"></div>
+
+    <script>
+        async function testStatsAPI() {
+            try {
+                const response = await fetch('http://localhost:8080/api/competitions/stats', {
+                    method: 'GET',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                });
+                
+                const data = await response.json();
+                document.getElementById('result').innerHTML = '<pre>' + JSON.stringify(data, null, 2) + '</pre>';
+                console.log('API 响应:', data);
+            } catch (error) {
+                console.error('API 调用失败:', error);
+                document.getElementById('result').innerHTML = '<p style="color: red;">API 调用失败: ' + error.message + '</p>';
+            }
+        }
+    </script>
+</body>
+</html>

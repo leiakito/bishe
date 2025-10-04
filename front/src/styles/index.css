@@ -1,0 +1,41 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* 全局样式 */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: 'Helvetica Neue', Helvetica, 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', '微软雅黑', Arial, sans-serif;
+  background-color: #f5f7fa;
+}
+
+/* Element Plus 样式覆盖 */
+.el-table {
+  @apply shadow-sm;
+}
+
+.el-card {
+  @apply shadow-sm;
+}
+
+.el-button {
+  @apply transition-all duration-200;
+}
+
+/* 自定义工具类 */
+.page-container {
+  @apply min-h-screen bg-gray-50;
+}
+
+.content-wrapper {
+  @apply max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6;
+}
+
+.card-shadow {
+  @apply bg-white rounded-lg shadow-sm border border-gray-200;
+}
