@@ -87,6 +87,16 @@ const routes: RouteRecordRaw[] = [
         }
       },
       {
+        path: 'competitions/:id',
+        name: 'CompetitionDetail',
+        component: () => import('@/pages/user/CompetitionDetail.vue'),
+        meta: {
+          title: '竞赛详情',
+          requiresAuth: true,
+          hideInMenu: true
+        }
+      },
+      {
         path: 'teams',
         name: 'UserTeams',
         component: () => import('@/pages/user/Teams.vue'),

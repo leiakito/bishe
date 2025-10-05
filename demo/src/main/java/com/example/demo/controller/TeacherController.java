@@ -252,7 +252,6 @@ public class TeacherController {
             teacherData.put("teacherId", teacher.getTeacherId());
             teacherData.put("department", teacher.getDepartment());
             teacherData.put("schoolName", teacher.getSchoolName());
-            teacherData.put("avatarUrl", teacher.getAvatarUrl());
             teacherData.put("status", teacher.getStatus());
             teacherData.put("createdAt", teacher.getCreatedAt());
             teacherData.put("updatedAt", teacher.getUpdatedAt());
@@ -321,10 +320,7 @@ public class TeacherController {
             if (updateData.containsKey("schoolName")) {
                 teacher.setSchoolName((String) updateData.get("schoolName"));
             }
-            if (updateData.containsKey("avatarUrl")) {
-                teacher.setAvatarUrl((String) updateData.get("avatarUrl"));
-            }
-            
+
             User updatedTeacher = userService.updateUser(teacher.getId(), teacher);
             
             Map<String, Object> updatedTeacherData = new HashMap<>();
@@ -336,7 +332,6 @@ public class TeacherController {
             updatedTeacherData.put("teacherId", updatedTeacher.getTeacherId());
             updatedTeacherData.put("department", updatedTeacher.getDepartment());
             updatedTeacherData.put("schoolName", updatedTeacher.getSchoolName());
-            updatedTeacherData.put("avatarUrl", updatedTeacher.getAvatarUrl());
             updatedTeacherData.put("updatedAt", updatedTeacher.getUpdatedAt());
             
             return ResponseEntity.ok(Map.of(

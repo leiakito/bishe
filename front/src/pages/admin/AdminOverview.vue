@@ -76,44 +76,94 @@
       <div class="quick-actions mb-8">
         <h2 class="text-lg font-semibold text-gray-800 mb-4">快捷操作</h2>
         <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <!-- 第一行 -->
           <button
-            @click="handleQuickAction('创建用户')"
-            class="quick-action-btn bg-white p-4 rounded-lg shadow-sm border border-gray-200 hover:shadow-md transition-shadow"
+            @click="handleCreateUser"
+            :disabled="actionLoading"
+            class="quick-action-btn bg-white p-4 rounded-lg shadow-sm border border-gray-200 hover:shadow-md hover:border-blue-300 transition-all duration-200 transform hover:-translate-y-1"
           >
-            <el-icon class="text-blue-600 text-2xl mb-2">
+            <el-icon class="text-blue-600 text-2xl mb-2" :class="{ 'animate-pulse': actionLoading }">
               <User />
             </el-icon>
             <p class="text-sm font-medium text-gray-700">创建用户</p>
           </button>
 
           <button
-            @click="handleQuickAction('发布竞赛')"
-            class="quick-action-btn bg-white p-4 rounded-lg shadow-sm border border-gray-200 hover:shadow-md transition-shadow"
+            @click="handleCreateCompetition"
+            :disabled="actionLoading"
+            class="quick-action-btn bg-white p-4 rounded-lg shadow-sm border border-gray-200 hover:shadow-md hover:border-yellow-300 transition-all duration-200 transform hover:-translate-y-1"
           >
-            <el-icon class="text-yellow-600 text-2xl mb-2">
+            <el-icon class="text-yellow-600 text-2xl mb-2" :class="{ 'animate-pulse': actionLoading }">
               <Trophy />
             </el-icon>
             <p class="text-sm font-medium text-gray-700">发布竞赛</p>
           </button>
 
           <button
-            @click="handleQuickAction('系统设置')"
-            class="quick-action-btn bg-white p-4 rounded-lg shadow-sm border border-gray-200 hover:shadow-md transition-shadow"
+            @click="handleSystemSettings"
+            :disabled="actionLoading"
+            class="quick-action-btn bg-white p-4 rounded-lg shadow-sm border border-gray-200 hover:shadow-md hover:border-gray-300 transition-all duration-200 transform hover:-translate-y-1"
           >
-            <el-icon class="text-gray-600 text-2xl mb-2">
+            <el-icon class="text-gray-600 text-2xl mb-2" :class="{ 'animate-pulse': actionLoading }">
               <Setting />
             </el-icon>
             <p class="text-sm font-medium text-gray-700">系统设置</p>
           </button>
 
           <button
-            @click="handleQuickAction('查看日志')"
-            class="quick-action-btn bg-white p-4 rounded-lg shadow-sm border border-gray-200 hover:shadow-md transition-shadow"
+            @click="handleViewLogs"
+            :disabled="actionLoading"
+            class="quick-action-btn bg-white p-4 rounded-lg shadow-sm border border-gray-200 hover:shadow-md hover:border-purple-300 transition-all duration-200 transform hover:-translate-y-1"
           >
-            <el-icon class="text-purple-600 text-2xl mb-2">
+            <el-icon class="text-purple-600 text-2xl mb-2" :class="{ 'animate-pulse': actionLoading }">
               <Document />
             </el-icon>
             <p class="text-sm font-medium text-gray-700">查看日志</p>
+          </button>
+
+          <!-- 第二行 -->
+          <button
+            @click="handleAddStudent"
+            :disabled="actionLoading"
+            class="quick-action-btn bg-white p-4 rounded-lg shadow-sm border border-gray-200 hover:shadow-md hover:border-green-300 transition-all duration-200 transform hover:-translate-y-1"
+          >
+            <el-icon class="text-green-600 text-2xl mb-2" :class="{ 'animate-pulse': actionLoading }">
+              <UserFilled />
+            </el-icon>
+            <p class="text-sm font-medium text-gray-700">添加学生</p>
+          </button>
+
+          <button
+            @click="handleAddTeacher"
+            :disabled="actionLoading"
+            class="quick-action-btn bg-white p-4 rounded-lg shadow-sm border border-gray-200 hover:shadow-md hover:border-indigo-300 transition-all duration-200 transform hover:-translate-y-1"
+          >
+            <el-icon class="text-indigo-600 text-2xl mb-2" :class="{ 'animate-pulse': actionLoading }">
+              <Avatar />
+            </el-icon>
+            <p class="text-sm font-medium text-gray-700">添加教师</p>
+          </button>
+
+          <button
+            @click="handleAuditCompetitions"
+            :disabled="actionLoading"
+            class="quick-action-btn bg-white p-4 rounded-lg shadow-sm border border-gray-200 hover:shadow-md hover:border-orange-300 transition-all duration-200 transform hover:-translate-y-1"
+          >
+            <el-icon class="text-orange-600 text-2xl mb-2" :class="{ 'animate-pulse': actionLoading }">
+              <CircleCheck />
+            </el-icon>
+            <p class="text-sm font-medium text-gray-700">审核竞赛</p>
+          </button>
+
+          <button
+            @click="handleDataExport"
+            :disabled="actionLoading"
+            class="quick-action-btn bg-white p-4 rounded-lg shadow-sm border border-gray-200 hover:shadow-md hover:border-teal-300 transition-all duration-200 transform hover:-translate-y-1"
+          >
+            <el-icon class="text-teal-600 text-2xl mb-2" :class="{ 'animate-pulse': actionLoading }">
+              <Download />
+            </el-icon>
+            <p class="text-sm font-medium text-gray-700">数据导出</p>
           </button>
         </div>
       </div>
@@ -205,7 +255,8 @@
 
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
-import { ElMessage } from 'element-plus'
+import { useRouter } from 'vue-router'
+import { ElMessage, ElMessageBox } from 'element-plus'
 import {
   User,
   UserFilled,
@@ -215,9 +266,18 @@ import {
   Warning,
   SuccessFilled,
   InfoFilled,
-  Setting
+  Setting,
+  CircleCheck,
+  Avatar,
+  Download
 } from '@element-plus/icons-vue'
-import { getSystemNotices, getUserStats, getCompetitionStats, getLogStats, type SystemNotice } from '@/api'
+import { getSystemNotices, getUserStats, getCompetitionStats, getLogStats, exportSystemLogs, type SystemNotice } from '@/api'
+import { exportStudents } from '@/api/student'
+import { exportTeachers } from '@/api/teacher'
+import { exportCompetitions } from '@/api/admin-competition'
+import StudentForm from './components/StudentForm.vue'
+
+const router = useRouter()
 
 // 响应式数据
 const loading = ref(false)
@@ -251,10 +311,142 @@ const recentActivities = ref([
 
 const systemNotices = ref<SystemNotice[]>([])
 const noticesLoading = ref(false)
+const actionLoading = ref(false)
 
-// 方法
-const handleQuickAction = (action: string) => {
-  ElMessage.info(`${action} 管理功能开发中...`)
+// 快捷操作方法
+const handleCreateUser = async () => {
+  try {
+    const { value } = await ElMessageBox.confirm(
+      '请选择要创建的用户类型',
+      '创建用户',
+      {
+        confirmButtonText: '创建学生',
+        cancelButtonText: '创建教师',
+        distinguishCancelAndClose: true,
+        type: 'info'
+      }
+    )
+    // 确认按钮 - 创建学生
+    router.push('/admin-dashboard/students?action=create')
+  } catch (action) {
+    if (action === 'cancel') {
+      // 取消按钮 - 创建教师
+      router.push('/admin-dashboard/teachers?action=create')
+    }
+    // close - 用户关闭对话框，不做任何操作
+  }
+}
+
+const handleCreateCompetition = () => {
+  router.push('/admin-dashboard/competitions?action=create')
+}
+
+const handleSystemSettings = () => {
+  router.push('/admin-dashboard/settings')
+}
+
+const handleViewLogs = () => {
+  router.push('/admin-dashboard/settings?tab=logs')
+}
+
+const handleAddStudent = () => {
+  router.push('/admin-dashboard/students?action=create')
+}
+
+const handleAddTeacher = () => {
+  router.push('/admin-dashboard/teachers?action=create')
+}
+
+const handleAuditCompetitions = () => {
+  router.push('/admin-dashboard/competitions?status=pending')
+}
+
+const handleDataExport = async () => {
+  try {
+    await ElMessageBox.confirm(
+      `将一次性导出以下数据到4个独立的Excel文件：
+
+📊 学生信息 (学号、姓名、班级等)
+👨‍🏫 教师信息 (工号、姓名、院系等)
+🏆 竞赛数据 (竞赛名称、参赛学生、成绩等)
+📝 系统日志 (操作时间、操作类型、操作人员等)
+
+导出时间可能较长，请耐心等待...`,
+      '一键导出所有数据',
+      {
+        confirmButtonText: '开始导出',
+        cancelButtonText: '取消',
+        type: 'warning',
+        center: true
+      }
+    )
+
+    actionLoading.value = true
+
+    // 显示加载提示
+    ElMessage.info({
+      message: '正在导出所有数据，请稍候...',
+      duration: 2000
+    })
+
+    // 并行导出所有数据，使用延迟避免请求过快
+    const exportTasks = [
+      { fn: exportStudents, name: '学生信息' },
+      { fn: exportTeachers, name: '教师信息' },
+      { fn: exportCompetitions, name: '竞赛数据' },
+      { fn: exportSystemLogs, name: '系统日志' }
+    ]
+
+    const results: { name: string; success: boolean; error?: any }[] = []
+
+    // 顺序执行导出任务，避免并发过多
+    for (const task of exportTasks) {
+      try {
+        console.log(`正在导出${task.name}...`)
+        await task.fn()
+        results.push({ name: task.name, success: true })
+        console.log(`${task.name}导出成功`)
+        // 添加小延迟
+        await new Promise(resolve => setTimeout(resolve, 300))
+      } catch (error) {
+        console.error(`${task.name}导出失败:`, error)
+        results.push({ name: task.name, success: false, error })
+      }
+    }
+
+    // 统计结果
+    const successTasks = results.filter(r => r.success)
+    const failedTasks = results.filter(r => !r.success)
+
+    if (failedTasks.length === 0) {
+      ElMessage.success({
+        message: `所有数据导出成功！已生成 ${successTasks.length} 个Excel文件`,
+        duration: 3000,
+        showClose: true
+      })
+    } else if (successTasks.length > 0) {
+      ElMessage.warning({
+        message: `部分数据导出成功 (${successTasks.length}/${exportTasks.length})，${failedTasks.map(t => t.name).join('、')}导出失败`,
+        duration: 5000,
+        showClose: true
+      })
+    } else {
+      ElMessage.error({
+        message: '所有数据导出失败，请检查网络连接后重试',
+        duration: 3000,
+        showClose: true
+      })
+    }
+
+  } catch (error) {
+    // 用户取消操作
+    if (error !== 'cancel' && error !== 'close') {
+      console.error('导出操作失败:', error)
+      ElMessage.error('导出操作失败')
+    }
+  } finally {
+    actionLoading.value = false
+  }
 }
 
 const refreshData = () => {
@@ -472,16 +664,72 @@ onMounted(() => {
 }
 
 .quick-action-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 80px;
+  cursor: pointer;
   text-align: center;
   transition: all 0.2s;
+  position: relative;
+  overflow: hidden;
 }
 
 .quick-action-btn:hover {
   transform: translateY(-1px);
+  background-color: #f8fafc;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.quick-action-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.quick-action-btn:disabled:hover {
+  transform: none;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.quick-action-btn::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.4), transparent);
+  transition: left 0.5s;
+}
+
+.quick-action-btn:hover::before {
+  left: 100%;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+.animate-pulse {
+  animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
 }
 
 .activity-item {
+  display: flex;
+  align-items: center;
+  padding: 12px 0;
+  border-bottom: 1px solid #f1f5f9;
   transition: background-color 0.2s;
+}
+
+.activity-item:last-child {
+  border-bottom: none;
 }
 
 .activity-item:hover {
@@ -491,11 +739,75 @@ onMounted(() => {
   margin: -8px;
 }
 
+.activity-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-right: 12px;
+}
+
+.activity-icon.user {
+  background-color: #dbeafe;
+  color: #3b82f6;
+}
+
+.activity-icon.competition {
+  background-color: #fef3c7;
+  color: #f59e0b;
+}
+
+.activity-icon.system {
+  background-color: #f3e8ff;
+  color: #8b5cf6;
+}
+
 .notice-item {
+  padding: 12px 0;
+  border-bottom: 1px solid #f1f5f9;
   transition: transform 0.2s;
+}
+
+.notice-item:last-child {
+  border-bottom: none;
 }
 
 .notice-item:hover {
   transform: translateX(2px);
+}
+
+.notice-title {
+  font-weight: 500;
+  margin-bottom: 4px;
+}
+
+.notice-title.info {
+  color: #3b82f6;
+}
+
+.notice-title.warning {
+  color: #f59e0b;
+}
+
+.notice-title.error {
+  color: #ef4444;
+}
+
+.notice-desc {
+  font-size: 0.875rem;
+}
+
+.notice-desc.info {
+  color: #64748b;
+}
+
+.notice-desc.warning {
+  color: #92400e;
+}
+
+.notice-desc.error {
+  color: #b91c1c;
 }
 </style>

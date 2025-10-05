@@ -312,17 +312,18 @@
               <!-- 个人赛：直接报名 -->
               <el-button
                 v-if="isIndividualCompetition(competition)"
-                type="success"
+                :type="competition.isRegistered ? 'info' : 'success'"
                 size="small"
                 @click="handleIndividualRegister(competition)"
-                :disabled="!canRegister(competition)"
+                :disabled="!canRegister(competition) || competition.isRegistered"
               >
-                <el-icon><Plus /></el-icon>
+                <el-icon v-if="competition.isRegistered"><CircleCheck /></el-icon>
+                <el-icon v-else><Plus /></el-icon>
                 {{ getRegisterButtonText(competition) }}
               </el-button>
 
               <!-- 团队赛：下拉菜单选择 -->
-              <el-dropdown v-else-if="canRegister(competition)" @command="(cmd: string) => handleTeamRegisterCommand(cmd, competition)">
+              <el-dropdown v-else-if="canRegister(competition) && !competition.isRegistered" @command="(cmd: string) => handleTeamRegisterCommand(cmd, competition)">
                 <el-button type="success" size="small">
                   <el-icon><Plus /></el-icon>
                   {{ getRegisterButtonText(competition) }}
@@ -333,6 +334,36 @@
                     <el-dropdown-item command="create">创建团队报名</el-dropdown-item>
                     <el-dropdown-item command="join">加入已有团队</el-dropdown-item>
                     <el-dropdown-item v-if="allowIndividualInTeamCompetition(competition)" command="individual" divided>个人报名</el-dropdown-item>
+                  </el-dropdown-menu>
+                </template>
+              </el-dropdown>
+
+              <!-- 已报名状态（团队赛） - 显示团队管理下拉菜单 -->
+              <el-dropdown v-else-if="competition.isRegistered && !isIndividualCompetition(competition)" @command="(cmd: string) => handleTeamManageCommand(cmd, competition)">
+                <el-button type="info" size="small">
+                  <el-icon><CircleCheck /></el-icon>
+                  {{ getRegisterButtonText(competition) }}
+                  <el-icon class="el-icon--right"><arrow-down /></el-icon>
+                </el-button>
+                <template #dropdown>
+                  <el-dropdown-menu>
+                    <el-dropdown-item command="view">查看团队</el-dropdown-item>
+                    <el-dropdown-item command="dissolve" divided>解散团队</el-dropdown-item>
+                    <el-dropdown-item command="cancel" divided>取消报名</el-dropdown-item>
+                  </el-dropdown-menu>
+                </template>
+              </el-dropdown>
+
+              <!-- 已报名状态（个人赛） - 显示取消报名下拉菜单 -->
+              <el-dropdown v-else-if="competition.isRegistered && isIndividualCompetition(competition)" @command="(cmd: string) => handleIndividualManageCommand(cmd, competition)">
+                <el-button type="info" size="small">
+                  <el-icon><CircleCheck /></el-icon>
+                  {{ getRegisterButtonText(competition) }}
+                  <el-icon class="el-icon--right"><arrow-down /></el-icon>
+                </el-button>
+                <template #dropdown>
+                  <el-dropdown-menu>
+                    <el-dropdown-item command="cancel" divided>取消报名</el-dropdown-item>
                   </el-dropdown-menu>
                 </template>
               </el-dropdown>
@@ -456,6 +487,7 @@
 
 <script setup lang="ts">
 import { ref, reactive, computed, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { useAuthStore } from '@/stores/auth'
 import {
@@ -477,8 +509,12 @@ import {
   ArrowDown
 } from '@element-plus/icons-vue'
 
+// 路由
+const router = useRouter()
+
 // API 服务 - 使用现有的通用API
-import { getStudentCompetitions, getStudentCompetitionStats, registerIndividualCompetition, checkUserRegistration } from '@/api/competition'
+import { getStudentCompetitions, getStudentCompetitionStats, registerIndividualCompetition, checkUserRegistration, cancelRegistration, registerTeamCompetition } from '@/api/competition'
+import { getMyTeams, dissolveTeam, getTeamMembers, createTeam } from '@/api/team'
 
 // 认证 store
 const authStore = useAuthStore()
@@ -508,6 +544,7 @@ interface Competition {
   registrationCount?: number
   createTime: string
   updateTime: string
+  isRegistered?: boolean  // 用户是否已报名
 }
 
 interface CompetitionQueryParams {
@@ -800,12 +837,18 @@ const fetchCompetitions = async () => {
       }
 
       competitions.value = processedCompetitions
+
+      // 检查每个竞赛的报名状态（仅当用户已登录时）
+      if (authStore.isAuthenticated) {
+        await checkAllRegistrationStatus()
+      }
+
       pagination.total = processedCompetitions.length
       pagination.current = (response.number || 0) + 1 // 后端使用0-based分页，前端显示1-based
 
       console.log('Processed competitions:', competitions.value)
       console.log('Pagination info:', pagination)
-      
+
       // 更新统计信息
       updateStats()
     } else {
@@ -821,6 +864,82 @@ const fetchCompetitions = async () => {
   } finally {
     loading.value = false
     filterLoading.value = false
+  }
+}
+
+// 验证竞赛ID是否有效
+const isValidCompetitionId = (id: any): boolean => {
+  return id !== null && 
+         id !== undefined && 
+         id !== '' && 
+         Number.isInteger(Number(id)) && 
+         Number(id) > 0
+}
+
+// 检查所有竞赛的报名状态
+const checkAllRegistrationStatus = async () => {
+  try {
+    // 并发检查所有竞赛的报名状态
+    const checkPromises = competitions.value.map(async (competition) => {
+      // 更严格的竞赛ID验证
+      if (!isValidCompetitionId(competition.id)) {
+        console.warn(`跳过无效的竞赛ID: ${competition.id}`, competition)
+        competition.isRegistered = false
+        return
+      }
+
+      // 状态保护逻辑：如果竞赛已经标记为已报名，则跳过检查
+      if (competition.isRegistered === true) {
+        console.log(`竞赛 ${competition.id} 已标记为已报名，跳过状态检查`)
+        return
+      }
+
+      try {
+        console.log(`检查竞赛报名状态 - ID: ${competition.id}, 名称: ${competition.name}`)
+        const checkResult = await checkUserRegistration(competition.id)
+        console.log(`竞赛 ${competition.id} API返回结果:`, checkResult)
+        console.log(`竞赛 ${competition.id} API返回数据类型:`, typeof checkResult.data, checkResult.data)
+        
+        // 检查返回的数据中是否包含当前竞赛的报名记录
+        let isRegistered = false
+        if (checkResult.success && checkResult.data) {
+          // 获取实际的数据，可能需要访问 checkResult.data.data
+          const actualData = (checkResult.data as any)?.data || checkResult.data
+          console.log(`竞赛 ${competition.id} 实际数据:`, actualData, `数据类型:`, typeof actualData)
+
+          if (Array.isArray(actualData)) {
+            // 如果是数组，检查数组中是否有匹配当前竞赛ID的记录
+            // 后端已修改,现在会返回包含 competitionId 字段的DTO
+            isRegistered = actualData.some((registration: any) => {
+              const regCompetitionId = registration.competitionId
+              console.log(`检查报名记录:`, registration, `竞赛ID匹配: ${regCompetitionId} === ${competition.id}`)
+              return regCompetitionId === competition.id
+            })
+            // 如果数组不为空,也表示已报名
+            if (!isRegistered && actualData.length > 0) {
+              isRegistered = true
+            }
+          } else if (typeof actualData === 'object' && actualData !== null) {
+            // 如果是对象，可能直接包含报名信息
+            console.log(`检查对象类型的报名数据:`, actualData)
+            const regCompetitionId = actualData.competitionId
+            isRegistered = regCompetitionId === competition.id
+            console.log(`对象报名记录竞赛ID匹配: ${regCompetitionId} === ${competition.id}, 结果: ${isRegistered}`)
+          }
+        }
+
+        competition.isRegistered = Boolean(isRegistered)
+        console.log(`竞赛 ${competition.id} 最终报名状态: ${competition.isRegistered}`)
+      } catch (error) {
+        console.error(`检查竞赛${competition.id}报名状态失败:`, error)
+        competition.isRegistered = false
+      }
+    })
+
+    await Promise.all(checkPromises)
+    console.log('所有竞赛报名状态检查完成')
+  } catch (error) {
+    console.error('批量检查报名状态失败:', error)
   }
 }
 
@@ -858,8 +977,8 @@ const updateStats = async () => {
 // 操作处理函数
 const handleView = (competition: Competition) => {
   console.log('查看竞赛:', competition)
-  ElMessage.info('查看竞赛详情功能待实现')
-  // TODO: 跳转到竞赛详情页面
+  // 跳转到竞赛详情页面
+  router.push(`/dashboard/competitions/${competition.id}`)
 }
 
 // 个人报名
@@ -872,9 +991,23 @@ const handleIndividualRegister = async (competition: Competition) => {
     return
   }
 
+  // 更严格的竞赛ID验证
+  if (!isValidCompetitionId(competition.id)) {
+    ElMessage.error('竞赛ID无效，无法进行报名')
+    console.error('竞赛ID无效:', {
+      id: competition.id,
+      type: typeof competition.id,
+      competition: competition
+    })
+    return
+  }
+
   try {
+    console.log('检查报名状态 - 竞赛ID:', competition.id, '类型:', typeof competition.id)
     // 检查是否已经报名（后端从JWT获取userId）
     const checkResult = await checkUserRegistration(competition.id)
+    console.log('报名状态检查结果:', checkResult)
+
     if (checkResult.success && checkResult.data && Array.isArray(checkResult.data) && checkResult.data.length > 0) {
       ElMessage.warning('您已经报名该竞赛')
       return
@@ -892,11 +1025,19 @@ const handleIndividualRegister = async (competition: Competition) => {
     )
 
     // 调用报名接口（后端从JWT获取userId，不需要传递）
+    console.log('调用报名接口 - 竞赛ID:', competition.id, '类型:', typeof competition.id)
     const result = await registerIndividualCompetition(competition.id)
+    console.log('报名接口返回结果:', result)
 
     if (result.success) {
       ElMessage.success('报名成功！')
-      // 刷新竞赛列表
+
+      // 步骤1: 立即更新当前竞赛的报名状态（无需等待API刷新）
+      // 这样用户可以立即看到按钮变为"已报名"状态
+      competition.isRegistered = true
+
+      // 步骤2: 后台刷新竞赛列表，获取最新的报名人数等数据
+      // fetchCompetitions 会重新检查所有竞赛的报名状态，确保数据准确
       await fetchCompetitions()
     } else {
       ElMessage.error(result.message || '报名失败')
@@ -956,6 +1097,7 @@ const submitCreateTeam = async () => {
   if (!teamFormRef.value) return
 
   try {
+    // 验证表单
     await teamFormRef.value.validate()
 
     if (!authStore.user || !selectedCompetition.value) {
@@ -963,21 +1105,93 @@ const submitCreateTeam = async () => {
       return
     }
 
+    const userId = authStore.user.id
+    const competitionId = selectedCompetition.value.id
+
+    if (!userId) {
+      ElMessage.error('用户ID无效')
+      return
+    }
+
+    if (!isValidCompetitionId(competitionId)) {
+      ElMessage.error('竞赛ID无效')
+      return
+    }
+
     teamFormLoading.value = true
 
-    ElMessage.success('团队创建并报名功能即将完成，敬请期待...')
+    console.log('开始创建团队并报名流程...')
+
+    // 第一步：创建团队
+    console.log('步骤1: 创建团队', {
+      name: teamForm.name,
+      description: teamForm.description,
+      maxMembers: teamForm.maxMembers,
+      competitionId: competitionId,
+      createdBy: userId
+    })
+
+    const teamData = {
+      name: teamForm.name,
+      description: teamForm.description,
+      maxMembers: teamForm.maxMembers
+    }
+
+    const createResult = await createTeam(teamData, competitionId, userId)
+    console.log('创建团队结果:', createResult)
+
+    if (!createResult.success || !createResult.data) {
+      ElMessage.error(createResult.message || '创建团队失败')
+      return
+    }
+
+    const createdTeam = createResult.data
+    const teamId = createdTeam.id
+
+    if (!teamId) {
+      ElMessage.error('创建的团队ID无效')
+      return
+    }
+
+    console.log('团队创建成功, 团队ID:', teamId)
+
+    // 第二步：使用新创建的团队报名竞赛
+    console.log('步骤2: 团队报名竞赛', {
+      teamId: teamId,
+      competitionId: competitionId
+    })
+
+    // 确保 teamId 和 competitionId 是正确的 number 类型
+    const numericTeamId = Number(teamId)
+    const numericCompetitionId = Number(competitionId)
+    
+    if (!numericTeamId || !numericCompetitionId) {
+      ElMessage.error('团队ID或竞赛ID无效')
+      return
+    }
+    
+    const registerResult = await registerTeamCompetition(numericTeamId, numericCompetitionId)
+    console.log('团队报名结果:', registerResult)
+
+    if (!registerResult.success) {
+      ElMessage.warning(`团队创建成功，但报名失败：${registerResult.message || '未知错误'}。请在团队管理中手动报名。`)
+      createTeamDialogVisible.value = false
+      await fetchCompetitions()
+      return
+    }
+
+    // 成功
+    ElMessage.success('团队创建并报名成功！')
     createTeamDialogVisible.value = false
 
-    // TODO: 调用创建团队API
-    // const result = await createTeamAPI({
-    //   name: teamForm.name,
-    //   description: teamForm.description,
-    //   competitionId: selectedCompetition.value.id,
-    //   maxMembers: teamForm.maxMembers
-    // })
+    // 刷新竞赛列表，更新报名状态
+    await fetchCompetitions()
 
-  } catch (error) {
-    console.error('创建团队失败:', error)
+  } catch (error: any) {
+    console.error('创建团队并报名失败:', error)
+    if (error !== 'cancel') {
+      ElMessage.error(error.message || '操作失败，请重试')
+    }
   } finally {
     teamFormLoading.value = false
   }
@@ -1023,7 +1237,192 @@ const submitJoinTeam = async (teamId: number) => {
   // TODO: 调用加入团队API
 }
 
+// 处理团队管理命令
+const handleTeamManageCommand = async (command: string, competition: Competition) => {
+  switch (command) {
+    case 'view':
+      await handleViewTeam(competition)
+      break
+    case 'dissolve':
+      await handleDissolveTeam(competition)
+      break
+    case 'cancel':
+      await handleCancelRegistration(competition)
+      break
+  }
+}
+
+// 个人赛管理命令处理
+const handleIndividualManageCommand = async (command: string, competition: Competition) => {
+  switch (command) {
+    case 'cancel':
+      await handleCancelRegistration(competition)
+      break
+  }
+}
+
+// 查看团队信息
+const handleViewTeam = async (competition: Competition) => {
+  ElMessage.info('查看团队详情功能即将完成，敬请期待...')
+  // TODO: 实现查看团队详情
+}
+
+// 取消报名
+const handleCancelRegistration = async (competition: Competition) => {
+  if (!authStore.user?.id) {
+    ElMessage.warning('请先登录')
+    return
+  }
+
+  // 验证竞赛ID
+  if (!isValidCompetitionId(competition.id)) {
+    ElMessage.error('竞赛ID无效')
+    return
+  }
+
+  try {
+    // 第一步：获取该竞赛的报名记录ID
+    console.log('获取竞赛报名记录, 竞赛ID:', competition.id)
+    const checkResult = await checkUserRegistration(competition.id)
+    console.log('报名记录查询结果:', checkResult)
+
+    if (!checkResult.success || !checkResult.data) {
+      ElMessage.error('未找到报名记录')
+      return
+    }
+
+    // 从返回的数据中获取报名ID
+    let registrationId: number | null = null
+    const actualData = (checkResult.data as any)?.data || checkResult.data
+
+    if (Array.isArray(actualData) && actualData.length > 0) {
+      // 找到匹配当前竞赛的报名记录
+      const registration = actualData.find((reg: any) => reg.competitionId === competition.id)
+      if (registration && registration.id) {
+        registrationId = registration.id
+      }
+    } else if (typeof actualData === 'object' && actualData !== null && actualData.id) {
+      registrationId = actualData.id
+    }
+
+    if (!registrationId) {
+      ElMessage.error('未找到有效的报名记录ID')
+      console.error('无法从数据中提取报名ID:', actualData)
+      return
+    }
+
+    console.log('找到报名记录ID:', registrationId)
+
+    // 第二步：确认取消操作
+    await ElMessageBox.confirm(
+      `确认要取消《${competition.name}》的报名吗？${competition.registrationFee ? `\n已支付的报名费￥${competition.registrationFee}将按规定退还` : ''}`,
+      '取消报名确认',
+      {
+        confirmButtonText: '确认取消',
+        cancelButtonText: '再想想',
+        type: 'warning',
+        confirmButtonClass: 'el-button--danger'
+      }
+    )
+
+    // 第三步：调用取消报名API
+    console.log('调用取消报名API, 报名ID:', registrationId)
+    const result = await cancelRegistration(registrationId)
+    console.log('取消报名结果:', result)
+
+    if (result.success) {
+      ElMessage.success('取消报名成功！')
+
+      // 立即更新UI状态
+      competition.isRegistered = false
+
+      // 刷新竞赛列表获取最新数据
+      await fetchCompetitions()
+    } else {
+      ElMessage.error(result.message || '取消报名失败')
+    }
+  } catch (error: any) {
+    if (error !== 'cancel') {
+      console.error('取消报名失败:', error)
+      ElMessage.error(error.message || '取消报名失败')
+    }
+  }
+}
+
+// 解散团队
+const handleDissolveTeam = async (competition: Competition) => {
+  if (!authStore.user?.id) {
+    ElMessage.warning('请先登录')
+    return
+  }
+
+  try {
+    // 确认解散操作
+    await ElMessageBox.confirm(
+      `确认要解散在竞赛《${competition.name}》中的团队吗？解散后所有成员将被移除，此操作不可撤销！`,
+      '解散团队确认',
+      {
+        confirmButtonText: '确认解散',
+        cancelButtonText: '取消',
+        type: 'warning',
+        confirmButtonClass: 'el-button--danger'
+      }
+    )
+
+    // 获取用户在该竞赛中的团队
+    const teamsResult = await getMyTeams()
+    if (!teamsResult.success || !teamsResult.data || teamsResult.data.length === 0) {
+      ElMessage.error('未找到您的团队信息')
+      return
+    }
+
+    // 找到该竞赛对应的团队
+    const userTeam = teamsResult.data.find((team: any) => {
+      return team.competition?.id === competition.id
+    })
+
+    if (!userTeam) {
+      ElMessage.error(`未找到您在竞赛《${competition.name}》中的团队`)
+      return
+    }
+
+    // 检查是否为队长
+    const membersResult = await getTeamMembers(userTeam.id)
+    if (!membersResult.success || !membersResult.data) {
+      ElMessage.error('获取团队成员信息失败')
+      return
+    }
+
+    const currentUserMember = membersResult.data.find((member: any) => member.user?.id === authStore.user?.id)
+    if (!currentUserMember || currentUserMember.role !== 'LEADER') {
+      ElMessage.error('只有队长才能解散团队')
+      return
+    }
+
+    // 调用解散团队 API
+    const result = await dissolveTeam(userTeam.id, authStore.user.id)
+
+    if (result.success) {
+      ElMessage.success('团队已成功解散')
+      // 刷新竞赛列表，更新报名状态
+      await fetchCompetitions()
+    } else {
+      ElMessage.error(result.message || '解散团队失败')
+    }
+  } catch (error: any) {
+    if (error !== 'cancel') {
+      console.error('解散团队失败:', error)
+      ElMessage.error(error.message || '解散团队失败')
+    }
+  }
+}
+
 const getRegisterButtonText = (competition: Competition): string => {
+  // 如果已报名，优先显示已报名状态
+  if (competition.isRegistered) {
+    return '已报名'
+  }
+
   switch (competition.status) {
     case 'DRAFT':
       return '草稿'

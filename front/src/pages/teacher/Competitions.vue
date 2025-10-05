@@ -1,15 +1,15 @@
 <template>
-  <div class="competitions-page">
-    <div class="page-header">
+  <div class="min-h-screen bg-gray-50 p-4 md:p-6 lg:p-8">
+    <div class="page-header mb-6">
       <h1 class="text-2xl font-bold text-gray-900">我的竞赛</h1>
       <p class="text-gray-600 mt-2">管理和查看您指导的竞赛项目</p>
     </div>
 
-    <div class="content-area mt-6">
-      <div class="bg-white rounded-lg shadow">
+    <div class="content-area">
+      <div class="bg-white rounded-lg shadow-sm border border-gray-200">
         <!-- 统计信息卡片 -->
-        <div class="p-6 border-b border-gray-200">
-          <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div class="p-4 md:p-6 border-b border-gray-200">
+          <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 md:gap-6">
             <div class="text-center">
               <div class="text-2xl font-bold text-blue-600">{{ stats.total }}</div>
               <div class="text-sm text-gray-500">总竞赛数</div>
@@ -30,7 +30,7 @@
         </div>
 
         <!-- 搜索和筛选区域 -->
-        <div class="p-6 border-b border-gray-200">
+        <div class="p-4 md:p-6 border-b border-gray-200">
           <div class="flex flex-col lg:flex-row gap-4">
             <!-- 搜索框 -->
             <div class="flex-1">
@@ -112,7 +112,7 @@
         </div>
 
         <!-- 工具栏 -->
-        <div class="p-6 border-b border-gray-200">
+        <div class="p-4 md:p-6 border-b border-gray-200">
           <div class="flex justify-between items-center">
             <div class="flex items-center gap-4">
               <span class="text-sm text-gray-500">
@@ -167,7 +167,7 @@
         </div>
         
         <!-- 竞赛列表 -->
-        <div class="p-6">
+        <div class="p-4 md:p-6">
           <div v-if="competitions.length > 0" class="space-y-4">
             <div 
               v-for="competition in competitions" 
@@ -239,11 +239,11 @@
                 
                 <!-- 操作按钮 -->
                 <div class="flex flex-col gap-2 ml-6">
-                  <el-button 
+                  <el-button
                     v-if="canEditCompetition(competition)"
-                    type="primary" 
-                    size="small" 
-                    @click="handleEdit(competition)" 
+                    type="primary"
+                    size="small"
+                    @click="handleEdit(competition)"
                     :icon="Edit"
                   >
                     编辑
@@ -253,6 +253,15 @@
                   </el-button>
                   <el-button type="info" size="small" @click="handleManage(competition)" :icon="Setting">
                     管理
+                  </el-button>
+                  <el-button
+                    v-if="canEditCompetition(competition)"
+                    type="danger"
+                    size="small"
+                    @click="handleDelete(competition)"
+                    :icon="Delete"
+                  >
+                    删除
                   </el-button>
                 </div>
               </div>
@@ -297,7 +306,7 @@
         </div>
 
         <!-- 分页 -->
-        <div v-if="competitions.length > 0 && !loading" class="p-6 border-t border-gray-200">
+        <div v-if="competitions.length > 0 && !loading" class="p-4 md:p-6 border-t border-gray-200">
           <div class="flex flex-col sm:flex-row justify-between items-center gap-4">
             <div class="flex items-center gap-2 text-sm text-gray-600">
               <span>每页显示</span>
@@ -567,14 +576,15 @@
 <script setup lang="ts">
 import { ref, reactive, onMounted, nextTick, computed, watch } from 'vue'
 import { ElMessage, ElMessageBox, type FormInstance, type FormRules } from 'element-plus'
-import { 
+import {
   Plus, Trophy, Loading, Search, Refresh, Sort, SortUp, SortDown,
-  Calendar, Timer, Collection, Location, OfficeBuilding, View, Edit, Setting
+  Calendar, Timer, Collection, Location, OfficeBuilding, View, Edit, Setting, Delete
 } from '@element-plus/icons-vue'
-import { 
-  createTeacherCompetition, 
+import {
+  createTeacherCompetition,
   getTeacherCompetitions,
   updateTeacherCompetition,
+  deleteTeacherCompetition,
   getCompetitionStats
 } from '@/api/competition'
 import { useAuthStore } from '@/stores/auth'
@@ -805,9 +815,18 @@ const fetchCompetitions = async () => {
     }
     
     const response = await getTeacherCompetitions(params)
-    
+
     competitions.value = response.content || []
-    
+
+    // 模拟浏览量数据（从本地存储加载并随机增加）
+    competitions.value = competitions.value.map(competition => {
+      const viewCount = getSimulatedViewCount(competition.id!)
+      return {
+        ...competition,
+        viewCount
+      }
+    })
+
     // 添加调试日志 - 查看竞赛数据结构
     console.log('=== 竞赛数据调试信息 ===')
     console.log('竞赛总数:', competitions.value.length)
@@ -990,6 +1009,14 @@ const handleEdit = (competition: Competition) => {
   editingId.value = competition.id || null
   
   // 填充表单数据
+  console.log('=== 竞赛数据检查 ===')
+  console.log('location:', competition.location)
+  console.log('organizer:', competition.organizer)
+  console.log('contactInfo:', competition.contactInfo)
+  console.log('prizeInfo:', competition.prizeInfo)
+  console.log('rules:', competition.rules)
+  console.log('完整竞赛对象:', competition)
+
   Object.assign(formData, {
     name: competition.name,
     description: competition.description || '',
@@ -1002,14 +1029,21 @@ const handleEdit = (competition: Competition) => {
     maxParticipants: competition.maxTeams,
     minTeamSize: competition.minTeamSize || 1,
     maxTeamSize: competition.maxTeamSize || 5,
-    registrationFee: competition.registrationFee || 0,
-    location: competition.location || '',
-    organizer: competition.organizer || '',
-    contactInfo: competition.contactInfo || '',
-    prizeInfo: competition.prizeInfo || '',
-    rules: competition.rules || ''
+    registrationFee: competition.registrationFee !== undefined ? competition.registrationFee : 0,
+    location: competition.location !== undefined ? competition.location : '',
+    organizer: competition.organizer !== undefined ? competition.organizer : '',
+    contactInfo: competition.contactInfo !== undefined ? competition.contactInfo : '',
+    prizeInfo: competition.prizeInfo !== undefined ? competition.prizeInfo : '',
+    rules: competition.rules !== undefined ? competition.rules : ''
   })
-  
+
+  console.log('=== 填充后的表单数据 ===')
+  console.log('formData.location:', formData.location)
+  console.log('formData.organizer:', formData.organizer)
+  console.log('formData.contactInfo:', formData.contactInfo)
+  console.log('formData.prizeInfo:', formData.prizeInfo)
+  console.log('formData.rules:', formData.rules)
+
   dialogVisible.value = true
 }
 
@@ -1021,6 +1055,82 @@ const handleView = (competition: Competition) => {
 // 管理竞赛
 const handleManage = (competition: Competition) => {
   ElMessage.info('管理功能待实现')
+}
+
+// 删除竞赛
+const handleDelete = async (competition: Competition) => {
+  try {
+    // 权限检查：只有竞赛创建者才能删除
+    const creatorId = String(competition.creator?.id || '')
+    const currentUserId = String(authStore.user?.id || '')
+
+    if (creatorId !== currentUserId || !creatorId) {
+      ElMessage.error('您没有权限删除此竞赛')
+      return
+    }
+
+    // 确认删除
+    await ElMessageBox.confirm(
+      `确定要删除竞赛"${competition.name}"吗？此操作不可恢复。`,
+      '删除确认',
+      {
+        confirmButtonText: '确定删除',
+        cancelButtonText: '取消',
+        type: 'warning',
+        confirmButtonClass: 'el-button--danger'
+      }
+    )
+
+    // 检查竞赛ID
+    if (!competition.id) {
+      ElMessage.error('竞赛ID无效，无法删除')
+      return
+    }
+
+    // 调用删除API
+    const response = await deleteTeacherCompetition(competition.id)
+
+    if (response.success) {
+      ElMessage.success('竞赛删除成功')
+      // 刷新列表
+      await fetchCompetitions()
+    } else {
+      ElMessage.error(response.message || '删除失败')
+    }
+  } catch (error: any) {
+    if (error !== 'cancel') {
+      console.error('删除竞赛失败:', error)
+      ElMessage.error(error.message || '删除竞赛失败')
+    }
+  }
+}
+
+// 模拟浏览量数据（使用本地存储）
+const VIEW_COUNT_STORAGE_KEY = 'competition_view_counts'
+
+const getSimulatedViewCount = (competitionId: number): number => {
+  try {
+    // 从本地存储获取所有浏览量数据
+    const storedData = localStorage.getItem(VIEW_COUNT_STORAGE_KEY)
+    const viewCounts: Record<number, number> = storedData ? JSON.parse(storedData) : {}
+
+    // 如果该竞赛没有浏览量记录，初始化为5
+    if (!viewCounts[competitionId]) {
+      viewCounts[competitionId] = 5
+    } else {
+      // 随机增加浏览量 (0-3)
+      const increment = Math.floor(Math.random() * 4)
+      viewCounts[competitionId] += increment
+    }
+
+    // 保存到本地存储
+    localStorage.setItem(VIEW_COUNT_STORAGE_KEY, JSON.stringify(viewCounts))
+
+    return viewCounts[competitionId]
+  } catch (error) {
+    console.error('处理浏览量数据失败:', error)
+    return 5
+  }
 }
 
 // 格式化日期
@@ -1110,13 +1220,6 @@ onMounted(() => {
 </script>
 
 <style scoped>
-.competitions-page {
-  padding: 24px;
-}
-
-.page-header {
-  margin-bottom: 24px;
-}
 
 .content-area {
   max-width: 1400px;

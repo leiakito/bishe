@@ -15,11 +15,12 @@ export const getTeamMembers = async (teamId: number, params?: { page?: number; s
     console.log('=== getTeamMembers API 响应 ===')
     console.log('原始响应:', response)
 
+    const responseData = response as any
     return {
-      success: response.success !== false,
-      data: response.data || [],
-      totalElements: response.totalElements || 0,
-      message: response.message || 'success'
+      success: responseData.success !== false,
+      data: responseData.data || [],
+      totalElements: responseData.totalElements || 0,
+      message: responseData.message || 'success'
     }
   } catch (error: any) {
     console.error('=== getTeamMembers API 错误 ===')

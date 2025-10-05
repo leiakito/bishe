@@ -15,15 +15,16 @@ public class UserProfileUpdateRequest {
     
     @Pattern(regexp = "^$|^1[3-9]\\d{9}$", message = "手机号格式不正确")
     private String phone;
-    
-    private String avatarUrl;
-    
+
     @Size(max = 100, message = "学校名称不能超过100个字符")
     private String schoolName;
     
     @Size(max = 100, message = "院系名称不能超过100个字符")
     private String department;
-    
+
+    @Size(max = 50, message = "职称不能超过50个字符")
+    private String title;
+
     // 构造函数
     public UserProfileUpdateRequest() {}
     
@@ -51,15 +52,7 @@ public class UserProfileUpdateRequest {
     public void setPhone(String phone) {
         this.phone = phone;
     }
-    
-    public String getAvatarUrl() {
-        return avatarUrl;
-    }
-    
-    public void setAvatarUrl(String avatarUrl) {
-        this.avatarUrl = avatarUrl;
-    }
-    
+
     public String getSchoolName() {
         return schoolName;
     }
@@ -71,8 +64,16 @@ public class UserProfileUpdateRequest {
     public String getDepartment() {
         return department;
     }
-    
+
     public void setDepartment(String department) {
         this.department = department;
+    }
+
+    public String getTitle() {
+        return title;
+    }
+
+    public void setTitle(String title) {
+        this.title = title;
     }
 }

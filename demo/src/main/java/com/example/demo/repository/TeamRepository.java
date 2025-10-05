@@ -130,4 +130,26 @@ public interface TeamRepository extends JpaRepository<Team, Long> {
     // 查找用户创建的团队
     @Query("SELECT t FROM Team t WHERE t.leader.id = :userId")
     Page<Team> findTeamsCreatedByUser(@Param("userId") Long userId, Pageable pageable);
+
+    // 通过报名记录查找竞赛的所有团队（包括直接关联和通过报名关联的）
+    @Query(value = "SELECT DISTINCT t.* FROM teams t " +
+           "LEFT JOIN registrations r ON r.team_id = t.id " +
+           "WHERE t.competition_id = :competitionId OR r.competition_id = :competitionId " +
+           "ORDER BY t.created_at DESC",
+           countQuery = "SELECT COUNT(DISTINCT t.id) FROM teams t " +
+           "LEFT JOIN registrations r ON r.team_id = t.id " +
+           "WHERE t.competition_id = :competitionId OR r.competition_id = :competitionId",
+           nativeQuery = true)
+    Page<Team> findTeamsByCompetitionIncludingRegistrations(@Param("competitionId") Long competitionId, Pageable pageable);
+
+    // 通过报名记录查找竞赛的所有团队（仅通过报名记录关联）
+    @Query(value = "SELECT DISTINCT t.* FROM teams t " +
+           "INNER JOIN registrations r ON r.team_id = t.id " +
+           "WHERE r.competition_id = :competitionId " +
+           "ORDER BY t.created_at DESC",
+           countQuery = "SELECT COUNT(DISTINCT t.id) FROM teams t " +
+           "INNER JOIN registrations r ON r.team_id = t.id " +
+           "WHERE r.competition_id = :competitionId",
+           nativeQuery = true)
+    Page<Team> findRegisteredTeamsByCompetition(@Param("competitionId") Long competitionId, Pageable pageable);
 }

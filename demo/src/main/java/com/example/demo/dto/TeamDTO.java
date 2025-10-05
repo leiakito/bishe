@@ -43,6 +43,25 @@ public class TeamDTO {
                 this.competition = new HashMap<>();
                 this.competition.put("id", team.getCompetition().getId());
                 this.competition.put("name", team.getCompetition().getName());
+                this.competition.put("description", team.getCompetition().getDescription());
+                this.competition.put("category", team.getCompetition().getCategory() != null ?
+                    team.getCompetition().getCategory().toString() : null);
+                this.competition.put("level", team.getCompetition().getLevel() != null ?
+                    team.getCompetition().getLevel().toString() : null);
+                this.competition.put("status", team.getCompetition().getStatus() != null ?
+                    team.getCompetition().getStatus().toString() : null);
+                this.competition.put("organizer", team.getCompetition().getOrganizer());
+                this.competition.put("location", team.getCompetition().getLocation());
+                this.competition.put("registrationStartTime", team.getCompetition().getRegistrationStartTime());
+                this.competition.put("registrationEndTime", team.getCompetition().getRegistrationEndTime());
+                this.competition.put("competitionStartTime", team.getCompetition().getCompetitionStartTime());
+                this.competition.put("competitionEndTime", team.getCompetition().getCompetitionEndTime());
+                this.competition.put("minTeamSize", team.getCompetition().getMinTeamSize());
+                this.competition.put("maxTeamSize", team.getCompetition().getMaxTeamSize());
+                this.competition.put("registrationFee", team.getCompetition().getRegistrationFee());
+                this.competition.put("viewCount", team.getCompetition().getViewCount());
+                this.competition.put("createdAt", team.getCompetition().getCreatedAt());
+                this.competition.put("updatedAt", team.getCompetition().getUpdatedAt());
                 System.out.println("Competition 已加载: ID=" + team.getCompetition().getId() + ", Name=" + team.getCompetition().getName());
             } else {
                 System.out.println("警告: Competition 为 null!");
@@ -67,6 +86,14 @@ public class TeamDTO {
                 this.leader.put("id", team.getLeader().getId());
                 this.leader.put("username", team.getLeader().getUsername());
                 this.leader.put("realName", team.getLeader().getRealName());
+                this.leader.put("email", team.getLeader().getEmail());
+                this.leader.put("studentId", team.getLeader().getStudentId());
+                this.leader.put("department", team.getLeader().getDepartment());
+                this.leader.put("phoneNumber", team.getLeader().getPhoneNumber());
+                this.leader.put("role", team.getLeader().getRole() != null ?
+                    team.getLeader().getRole().toString() : null);
+                this.leader.put("status", team.getLeader().getStatus() != null ?
+                    team.getLeader().getStatus().toString() : null);
                 System.out.println("Leader 已加载: ID=" + team.getLeader().getId() + ", Username=" + team.getLeader().getUsername());
             } else {
                 System.out.println("警告: Leader 为 null!");

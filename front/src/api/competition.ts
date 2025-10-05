@@ -1,4 +1,5 @@
 import { request } from '@/utils/request'
+import { useAuthStore } from '@/stores/auth'
 import type {
   Competition,
   TeacherCompetitionCreateRequest,
@@ -207,16 +208,16 @@ export const createTeacherCompetition = async (data: TeacherCompetitionCreateReq
       registrationEndTime: data.registrationEndTime,
       startTime: data.startTime,  // 后端会映射到competitionStartTime
       endTime: data.endTime,      // 后端会映射到competitionEndTime
-      ...(data.description && { description: data.description }),
-      ...(data.rules && { rules: data.rules }),
-      ...(data.maxParticipants && { maxParticipants: data.maxParticipants }),
-      ...(data.location && { location: data.location }),
-      ...(data.organizer && { organizer: data.organizer }),
-      ...(data.contactInfo && { contactInfo: data.contactInfo }),
-      ...(data.prizeInfo && { prizeInfo: data.prizeInfo }),
-      ...(data.registrationFee && { registrationFee: data.registrationFee }),
-      ...(data.maxTeamSize && { maxTeamSize: data.maxTeamSize }),
-      ...(data.minTeamSize && { minTeamSize: data.minTeamSize })
+      ...(data.description !== undefined && data.description !== null && { description: data.description }),
+      ...(data.rules !== undefined && data.rules !== null && { rules: data.rules }),
+      ...(data.maxParticipants !== undefined && data.maxParticipants !== null && { maxParticipants: data.maxParticipants }),
+      ...(data.location !== undefined && data.location !== null && { location: data.location }),
+      ...(data.organizer !== undefined && data.organizer !== null && { organizer: data.organizer }),
+      ...(data.contactInfo !== undefined && data.contactInfo !== null && { contactInfo: data.contactInfo }),
+      ...(data.prizeInfo !== undefined && data.prizeInfo !== null && { prizeInfo: data.prizeInfo }),
+      ...(data.registrationFee !== undefined && data.registrationFee !== null && { registrationFee: data.registrationFee }),
+      ...(data.maxTeamSize !== undefined && data.maxTeamSize !== null && { maxTeamSize: data.maxTeamSize }),
+      ...(data.minTeamSize !== undefined && data.minTeamSize !== null && { minTeamSize: data.minTeamSize })
     }
     
     console.log('发送到后端的数据:', requestData)
@@ -378,7 +379,16 @@ export const getTeacherCompetitions = async (params?: CompetitionQueryParams) =>
 export const getCompetitionDetail = async (id: number) => {
   try {
     const response = await request.get<Competition>(`/api/competitions/${id}`)
-    return wrapResponse(response)
+    console.log('getCompetitionDetail API 原始响应:', response)
+    
+    // 由于响应拦截器已经处理了数据格式，直接返回
+    // 如果response已经是标准格式，直接返回；否则包装
+    if (response && typeof response === 'object' && 'success' in response) {
+      return response
+    } else {
+      // 如果没有success字段，说明是原始数据，需要包装
+      return wrapResponse(response)
+    }
   } catch (error: any) {
     console.error('获取竞赛详情失败:', error)
     
@@ -404,24 +414,24 @@ export const updateTeacherCompetition = async (id: number, data: Partial<Teacher
     
     // 构建更新数据，确保字段映射正确
     const updateData: any = {}
-    
-    if (data.name !== undefined) updateData.name = data.name
-    if (data.description !== undefined) updateData.description = data.description
-    if (data.category !== undefined) updateData.category = data.category
-    if (data.level !== undefined) updateData.level = data.level
-    if (data.registrationStartTime !== undefined) updateData.registrationStartTime = data.registrationStartTime
-    if (data.registrationEndTime !== undefined) updateData.registrationEndTime = data.registrationEndTime
-    if (data.startTime !== undefined) updateData.startTime = data.startTime
-    if (data.endTime !== undefined) updateData.endTime = data.endTime
-    if (data.maxParticipants !== undefined) updateData.maxParticipants = data.maxParticipants
-    if (data.minTeamSize !== undefined) updateData.minTeamSize = data.minTeamSize
-    if (data.maxTeamSize !== undefined) updateData.maxTeamSize = data.maxTeamSize
-    if (data.registrationFee !== undefined) updateData.registrationFee = data.registrationFee
-    if (data.location !== undefined) updateData.location = data.location
-    if (data.organizer !== undefined) updateData.organizer = data.organizer
-    if (data.contactInfo !== undefined) updateData.contactInfo = data.contactInfo
-    if (data.prizeInfo !== undefined) updateData.prizeInfo = data.prizeInfo
-    if (data.rules !== undefined) updateData.rules = data.rules
+
+    if (data.name !== undefined && data.name !== null) updateData.name = data.name
+    if (data.description !== undefined && data.description !== null) updateData.description = data.description
+    if (data.category !== undefined && data.category !== null) updateData.category = data.category
+    if (data.level !== undefined && data.level !== null) updateData.level = data.level
+    if (data.registrationStartTime !== undefined && data.registrationStartTime !== null) updateData.registrationStartTime = data.registrationStartTime
+    if (data.registrationEndTime !== undefined && data.registrationEndTime !== null) updateData.registrationEndTime = data.registrationEndTime
+    if (data.startTime !== undefined && data.startTime !== null) updateData.startTime = data.startTime
+    if (data.endTime !== undefined && data.endTime !== null) updateData.endTime = data.endTime
+    if (data.maxParticipants !== undefined && data.maxParticipants !== null) updateData.maxParticipants = data.maxParticipants
+    if (data.minTeamSize !== undefined && data.minTeamSize !== null) updateData.minTeamSize = data.minTeamSize
+    if (data.maxTeamSize !== undefined && data.maxTeamSize !== null) updateData.maxTeamSize = data.maxTeamSize
+    if (data.registrationFee !== undefined && data.registrationFee !== null) updateData.registrationFee = data.registrationFee
+    if (data.location !== undefined && data.location !== null) updateData.location = data.location
+    if (data.organizer !== undefined && data.organizer !== null) updateData.organizer = data.organizer
+    if (data.contactInfo !== undefined && data.contactInfo !== null) updateData.contactInfo = data.contactInfo
+    if (data.prizeInfo !== undefined && data.prizeInfo !== null) updateData.prizeInfo = data.prizeInfo
+    if (data.rules !== undefined && data.rules !== null) updateData.rules = data.rules
     
     const response = await request.put<Competition>(`/api/teacher/competitions/${id}`, updateData)
     
@@ -525,50 +535,155 @@ export const registerIndividualCompetition = async (competitionId: number) => {
   }
 }
 
-// 学生团队报名竞赛
-export const registerTeamCompetition = async (competitionId: number, teamId: number, submittedBy: number) => {
-  try {
-    console.log('团队报名竞赛:', { competitionId, teamId, submittedBy })
-    const response = await request.post<any>('/api/registrations/register-team', {
-      competitionId,
-      teamId,
-      submittedBy
-    })
-    console.log('团队报名响应:', response)
-    return wrapResponse(response)
-  } catch (error: any) {
-    console.error('团队报名失败:', error)
+// 学生团队报名竞赛（旧接口，已废弃，使用下面的新版本）
+// export const registerTeamCompetitionOld = async (competitionId: number, teamId: number, submittedBy: number) => {
+//   try {
+//     console.log('团队报名竞赛:', { competitionId, teamId, submittedBy })
+//     const response = await request.post<any>('/api/registrations/register-team', {
+//       competitionId,
+//       teamId,
+//       submittedBy
+//     })
+//     console.log('团队报名响应:', response)
+//     return wrapResponse(response)
+//   } catch (error: any) {
+//     console.error('团队报名失败:', error)
 
-    let errorMessage = '团队报名失败'
-    if (error.response?.data?.message) {
-      errorMessage = error.response.data.message
-    } else if (error.response?.data?.error) {
-      errorMessage = error.response.data.error
-    } else if (error.message) {
-      errorMessage = error.message
+//     let errorMessage = '团队报名失败'
+//     if (error.response?.data?.message) {
+//       errorMessage = error.response.data.message
+//     } else if (error.response?.data?.error) {
+//       errorMessage = error.response.data.error
+//     } else if (error.message) {
+//       errorMessage = error.message
+//     }
+
+//     return {
+//       success: false,
+//       message: errorMessage,
+//       data: null
+//     }
+//   }
+// }
+
+// 检查用户是否已报名竞赛（后端从JWT获取userId）
+export const checkUserRegistration = async (competitionId: number) => {
+  try {
+    // 参数验证
+    if (!competitionId || typeof competitionId !== 'number' || competitionId <= 0) {
+      console.error('无效的竞赛ID:', competitionId)
+      return {
+        success: false,
+        message: '竞赛ID无效',
+        data: []
+      }
     }
 
+    console.log('调用报名状态检查API - 竞赛ID:', competitionId)
+    const response = await request.get<any>('/api/registrations/user-competition', { competitionId })
+    console.log('报名状态API响应:', response)
+    return wrapResponse(response)
+  } catch (error: any) {
+    console.error('检查报名状态失败:', error)
+    console.error('错误详情:', error.response?.data)
     return {
       success: false,
-      message: errorMessage,
+      message: error.response?.data?.message || '检查报名状态失败',
+      data: []
+    }
+  }
+}
+
+// 取消报名
+export const cancelRegistration = async (registrationId: number, reason?: string) => {
+  try {
+    // 参数验证
+    if (!registrationId || typeof registrationId !== 'number' || registrationId <= 0) {
+      console.error('无效的报名ID:', registrationId)
+      return {
+        success: false,
+        message: '报名ID无效',
+        data: null
+      }
+    }
+
+    // 从认证store获取当前用户ID
+    const authStore = useAuthStore()
+    const currentUserId = authStore.user?.id
+
+    if (!currentUserId) {
+      return {
+        success: false,
+        message: '用户未登录',
+        data: null
+      }
+    }
+
+    console.log('调用取消报名API - 报名ID:', registrationId, '用户ID:', currentUserId)
+
+    const requestBody = reason ? { reason } : {}
+    const response = await request.put<any>(
+      `/api/registrations/${registrationId}/cancel?cancelledBy=${currentUserId}`,
+      requestBody
+    )
+
+    console.log('取消报名API响应:', response)
+    return wrapResponse(response)
+  } catch (error: any) {
+    console.error('取消报名失败:', error)
+    console.error('错误详情:', error.response?.data)
+    return {
+      success: false,
+      message: error.response?.data?.message || '取消报名失败',
       data: null
     }
   }
 }
 
-// 检查用户是否已报名竞赛（后端从JWT获取userId）
-export const checkUserRegistration = async (competitionId: number) => {
+// 团队报名竞赛
+export const registerTeamCompetition = async (teamId: number, competitionId: number, remarks?: string) => {
   try {
-    const response = await request.get<any>('/api/registrations/user-competition', {
-      params: { competitionId }
-    })
+    // 参数验证
+    if (!teamId || typeof teamId !== 'number' || teamId <= 0) {
+      console.error('无效的团队ID:', teamId)
+      return {
+        success: false,
+        message: '团队ID无效',
+        data: null
+      }
+    }
+
+    if (!competitionId || typeof competitionId !== 'number' || competitionId <= 0) {
+      console.error('无效的竞赛ID:', competitionId)
+      return {
+        success: false,
+        message: '竞赛ID无效',
+        data: null
+      }
+    }
+
+    console.log('调用团队报名API - 团队ID:', teamId, '竞赛ID:', competitionId)
+
+    const requestBody: any = {
+      teamId,
+      competitionId
+    }
+
+    if (remarks) {
+      requestBody.remarks = remarks
+    }
+
+    const response = await request.post<any>('/api/registrations/team', requestBody)
+
+    console.log('团队报名API响应:', response)
     return wrapResponse(response)
   } catch (error: any) {
-    console.error('检查报名状态失败:', error)
+    console.error('团队报名失败:', error)
+    console.error('错误详情:', error.response?.data)
     return {
       success: false,
-      message: '检查报名状态失败',
-      data: []
+      message: error.response?.data?.message || '团队报名失败',
+      data: null
     }
   }
 }

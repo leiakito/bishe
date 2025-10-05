@@ -118,25 +118,29 @@ public class TeamController {
         }
     }
     
-    // 根据竞赛获取团队
+    // 根据竞赛获取团队（修改：包括通过报名记录关联的团队）
     @GetMapping("/competition/{competitionId}")
     public ResponseEntity<?> getTeamsByCompetition(
             @PathVariable Long competitionId,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size) {
         try {
-            Pageable pageable = PageRequest.of(page, size, Sort.by("createdAt").descending());
-            Page<Team> teams = teamService.getTeamsByCompetition(competitionId, pageable);
+            Pageable pageable = PageRequest.of(page, size, Sort.by("created_at").descending());
+
+            // 修改：使用新方法获取所有相关团队（包括通过报名记录关联的）
+            Page<Team> teams = teamService.getAllTeamsByCompetition(competitionId, pageable);
+
             return ResponseEntity.ok(Map.of(
                 "success", true,
                 "data", teams.getContent(),
                 "totalElements", teams.getTotalElements(),
-                "totalPages", teams.getTotalPages()
+                "totalPages", teams.getTotalPages(),
+                "currentPage", teams.getNumber()
             ));
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of(
                 "success", false,
-                "message", "获取团队列表失败"
+                "message", "获取团队列表失败: " + e.getMessage()
             ));
         }
     }
@@ -148,7 +152,7 @@ public class TeamController {
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size) {
         try {
-            Pageable pageable = PageRequest.of(page, size, Sort.by("createdAt").descending());
+            Pageable pageable = PageRequest.of(page, size, Sort.by("created_at").descending());
             Page<Team> teams = teamService.getTeamsByStatus(status, pageable);
             return ResponseEntity.ok(Map.of(
                 "success", true,
@@ -171,7 +175,7 @@ public class TeamController {
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size) {
         try {
-            Pageable pageable = PageRequest.of(page, size, Sort.by("createdAt").descending());
+            Pageable pageable = PageRequest.of(page, size, Sort.by("created_at").descending());
             Page<Team> teams = teamService.searchTeams(keyword, pageable);
             return ResponseEntity.ok(Map.of(
                 "success", true,
@@ -194,7 +198,7 @@ public class TeamController {
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size) {
         try {
-            Pageable pageable = PageRequest.of(page, size, Sort.by("createdAt").descending());
+            Pageable pageable = PageRequest.of(page, size, Sort.by("created_at").descending());
             Page<Team> teams = teamService.getTeamsCreatedByUser(userId, pageable);
             return ResponseEntity.ok(Map.of(
                 "success", true,
@@ -265,7 +269,7 @@ public class TeamController {
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size) {
         try {
-            Pageable pageable = PageRequest.of(page, size, Sort.by("createdAt").descending());
+            Pageable pageable = PageRequest.of(page, size, Sort.by("created_at").descending());
             Page<Team> teams = teamService.getTeamsJoinedByUser(userId, pageable);
             return ResponseEntity.ok(Map.of(
                 "success", true,
@@ -288,7 +292,7 @@ public class TeamController {
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size) {
         try {
-            Pageable pageable = PageRequest.of(page, size, Sort.by("createdAt").descending());
+            Pageable pageable = PageRequest.of(page, size, Sort.by("created_at").descending());
             List<Team> teamList = teamService.getAvailableTeams(competitionId);
             Page<Team> teams = new PageImpl<>(teamList, pageable, teamList.size());
 
@@ -368,7 +372,8 @@ public class TeamController {
     @DeleteMapping("/{id}")
     public ResponseEntity<?> dissolveTeam(@PathVariable Long id, @RequestParam Long dissolvedBy) {
         try {
-            // 解散团队的逻辑需要在TeamService中实现
+            // 调用 TeamService 的 disbandTeam 方法来解散团队
+            teamService.disbandTeam(id, dissolvedBy);
             return ResponseEntity.ok(Map.of(
                 "success", true,
                 "message", "团队解散成功"
@@ -500,12 +505,26 @@ public class TeamController {
     @GetMapping("/{id}/members")
     public ResponseEntity<?> getTeamMembers(@PathVariable Long id) {
         try {
+            System.out.println("=== getTeamMembers 调用 ===");
+            System.out.println("团队ID: " + id);
+
             List<TeamMember> members = teamService.getTeamMembers(id);
+            System.out.println("查询到的成员数量: " + members.size());
+
+            // 转换为 DTO 以正确序列化用户信息
+            java.util.List<com.example.demo.dto.TeamMemberDTO> memberDTOs = members.stream()
+                .map(com.example.demo.dto.TeamMemberDTO::new)
+                .collect(java.util.stream.Collectors.toList());
+
+            System.out.println("TeamMemberDTO 转换完成，数量: " + memberDTOs.size());
+
             return ResponseEntity.ok(Map.of(
                 "success", true,
-                "data", members
+                "data", memberDTOs
             ));
         } catch (Exception e) {
+            System.err.println("获取团队成员失败: " + e.getMessage());
+            e.printStackTrace();
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of(
                 "success", false,
                 "message", "获取团队成员失败"
@@ -517,19 +536,44 @@ public class TeamController {
     @GetMapping("/{id}/details")
     public ResponseEntity<?> getTeamDetails(@PathVariable Long id) {
         try {
-            // 获取团队详情的逻辑需要在TeamService中实现
-            Team team = teamService.findById(id).orElse(null);
-            Map<String, Object> details = team != null ? Map.of("team", team) : Map.of();
+            System.out.println("=== getTeamDetails 调用 ===");
+            System.out.println("团队ID: " + id);
+
+            // 获取团队详情
+            Optional<Team> teamOpt = teamService.findById(id);
+
+            if (teamOpt.isEmpty()) {
+                System.out.println("团队不存在");
+                return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of(
+                    "success", false,
+                    "message", "团队不存在"
+                ));
+            }
+
+            Team team = teamOpt.get();
+            System.out.println("找到团队: " + team.getName());
+
+            // 转换为 DTO 以正确序列化关联数据
+            com.example.demo.dto.TeamDTO teamDTO = new com.example.demo.dto.TeamDTO(team);
+
+            System.out.println("TeamDTO 转换完成");
+            System.out.println("Competition: " + (teamDTO.getCompetition() != null ? "已加载" : "null"));
+            System.out.println("Leader: " + (teamDTO.getLeader() != null ? "已加载" : "null"));
+
             return ResponseEntity.ok(Map.of(
                 "success", true,
-                "data", details
+                "data", teamDTO
             ));
         } catch (RuntimeException e) {
+            System.err.println("获取团队详情失败(RuntimeException): " + e.getMessage());
+            e.printStackTrace();
             return ResponseEntity.badRequest().body(Map.of(
                 "success", false,
                 "message", e.getMessage()
             ));
         } catch (Exception e) {
+            System.err.println("获取团队详情失败(Exception): " + e.getMessage());
+            e.printStackTrace();
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of(
                 "success", false,
                 "message", "获取团队详情失败"

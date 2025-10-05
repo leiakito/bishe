@@ -8,9 +8,21 @@
       </el-button>
     </div>
 
+    <!-- 错误状态 -->
+    <div v-if="error && !loading" class="bg-white rounded-lg shadow-sm p-6 mb-6">
+      <div class="text-center py-12">
+        <el-icon size="64" class="text-red-400"><CircleClose /></el-icon>
+        <h3 class="text-lg font-medium text-gray-900 mt-4">加载失败</h3>
+        <p class="text-gray-500 mt-2">{{ error }}</p>
+        <el-button type="primary" @click="loadTeamDetail" class="mt-4">
+          重新加载
+        </el-button>
+      </div>
+    </div>
+
     <div v-loading="loading" element-loading-text="加载中...">
       <!-- 团队头部信息 -->
-      <div v-if="teamDetail" class="bg-white rounded-lg shadow-sm p-6 mb-6">
+      <div v-if="teamDetail && !error" class="bg-white rounded-lg shadow-sm p-6 mb-6">
         <div class="flex justify-between items-start mb-4">
           <div>
             <h1 class="text-3xl font-bold text-gray-900 mb-2">{{ teamDetail.name }}</h1>
@@ -172,7 +184,7 @@
       </div>
 
       <!-- 团队统计 -->
-      <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+      <div v-if="teamDetail && !error" class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
         <div class="bg-white rounded-lg shadow-sm p-6">
           <div class="flex items-center">
             <div class="p-3 rounded-full bg-blue-100 text-blue-600">
@@ -213,7 +225,7 @@
       </div>
 
       <!-- 成员列表 -->
-      <div class="bg-white rounded-lg shadow-sm p-6 mb-6">
+      <div v-if="teamDetail && !error" class="bg-white rounded-lg shadow-sm p-6 mb-6">
         <div class="flex justify-between items-center mb-4">
           <h2 class="text-xl font-bold text-gray-900">团队成员</h2>
           <el-button v-if="isLeader" type="primary" @click="openInviteDialog">
@@ -287,7 +299,7 @@
       </div>
 
       <!-- 操作区域 -->
-      <div class="bg-white rounded-lg shadow-sm p-6">
+      <div v-if="teamDetail && !error" class="bg-white rounded-lg shadow-sm p-6">
         <h2 class="text-xl font-bold text-gray-900 mb-4">团队操作</h2>
 
         <!-- 队长操作 -->
@@ -312,9 +324,13 @@
 
         <!-- 访客操作 -->
         <div v-else class="flex gap-4">
-          <el-button type="primary" @click="handleApplyToJoin">
+          <el-button 
+            :type="canJoinTeam ? 'primary' : 'info'" 
+            :disabled="!canJoinTeam"
+            @click="handleApplyToJoin"
+          >
             <el-icon><Plus /></el-icon>
-            申请加入
+            {{ joinButtonText }}
           </el-button>
         </div>
       </div>
@@ -391,12 +407,16 @@ const router = useRouter()
 const authStore = useAuthStore()
 
 // 数据状态
-const teamId = computed(() => parseInt(route.params.id as string))
+const teamId = computed(() => {
+  const id = parseInt(route.params.id as string)
+  return isNaN(id) || id <= 0 ? null : id
+})
 const currentUserId = computed(() => authStore.user?.id)
 const teamDetail = ref<any>(null)
 const members = ref<any[]>([])
 const loading = ref(false)
 const submitting = ref(false)
+const error = ref<string>('')
 
 // 对话框状态
 const inviteDialogVisible = ref(false)
@@ -432,19 +452,72 @@ const pendingMembers = computed(() => {
   return members.value.filter((m) => m.status === 'PENDING').length
 })
 
+// 检查是否可以加入团队
+const canJoinTeam = computed(() => {
+  if (!teamDetail.value) return false
+  
+  // 如果已经是团队成员，不能再申请加入
+  if (isMember.value || isLeader.value) return false
+  
+  // 检查团队状态是否为活跃状态
+  if (teamDetail.value.status !== 'ACTIVE') return false
+  
+  // 检查团队是否已满员
+  const maxMembers = teamDetail.value.maxMembers || teamDetail.value.competition?.maxTeamSize || 0
+  if (maxMembers > 0 && activeMembers.value >= maxMembers) return false
+  
+  return true
+})
+
+// 动态按钮文本
+const joinButtonText = computed(() => {
+  if (!teamDetail.value) return '申请加入'
+  
+  if (isMember.value || isLeader.value) return '已加入团队'
+  
+  if (teamDetail.value.status !== 'ACTIVE') {
+    if (teamDetail.value.status === 'DISSOLVED') return '团队已解散'
+    return '未开放招募'
+  }
+  
+  const maxMembers = teamDetail.value.maxMembers || teamDetail.value.competition?.maxTeamSize || 0
+  if (maxMembers > 0 && activeMembers.value >= maxMembers) return '人数已满'
+  
+  return '申请加入'
+})
+
 // 加载团队详情
 const loadTeamDetail = async () => {
+  if (!teamId.value) {
+    error.value = '无效的团队ID'
+    ElMessage.error('无效的团队ID')
+    router.push('/dashboard/teams')
+    return
+  }
+
   loading.value = true
+  error.value = ''
   try {
     const response = await teamApi.getTeamDetails(teamId.value)
     if (response.success) {
       teamDetail.value = response.data
+      if (!teamDetail.value) {
+        error.value = '团队不存在'
+        ElMessage.error('团队不存在')
+        router.push('/dashboard/teams')
+      }
     } else {
-      ElMessage.error(response.message || '加载团队详情失败')
+      error.value = response.message || '加载团队详情失败'
+      ElMessage.error(error.value)
+      if ((response as any).code === 404) {
+         router.push('/dashboard/teams')
+       }
     }
-  } catch (error) {
+  } catch (error: any) {
     console.error('加载团队详情失败:', error)
-    ElMessage.error('加载团队详情失败')
+    const errorMsg = error?.response?.data?.message || '加载团队详情失败'
+    error.value = errorMsg
+    ElMessage.error(errorMsg)
   } finally {
     loading.value = false
   }
@@ -452,13 +525,22 @@ const loadTeamDetail = async () => {
 
 // 加载成员列表
 const loadMembers = async () => {
+  if (!teamId.value) {
+    return
+  }
+
   try {
     const response = await teamMemberApi.getTeamMembers(teamId.value)
     if (response.success) {
-      members.value = response.data
+      members.value = response.data || []
+    } else {
+      console.error('加载成员列表失败:', response.message)
+      ElMessage.warning(response.message || '加载成员列表失败')
     }
-  } catch (error) {
+  } catch (error: any) {
     console.error('加载成员列表失败:', error)
+    const errorMsg = error?.response?.data?.message || '加载成员列表失败'
+    ElMessage.warning(errorMsg)
   }
 }
 
@@ -628,6 +710,11 @@ const handleInvite = async () => {
     return
   }
 
+  if (!teamId.value) {
+    ElMessage.error('无效的团队ID')
+    return
+  }
+
   submitting.value = true
   try {
     const response = await teamMemberApi.inviteMember(
@@ -651,6 +738,11 @@ const handleInvite = async () => {
 
 // 审核成员
 const approveMember = async (memberId: number, approved: boolean) => {
+  if (!teamId.value) {
+    ElMessage.error('无效的团队ID')
+    return
+  }
+
   try {
     const response = await teamMemberApi.approveJoinRequest(
       teamId.value,
@@ -673,6 +765,11 @@ const approveMember = async (memberId: number, approved: boolean) => {
 
 // 移除成员
 const handleRemoveMember = async (memberId: number) => {
+  if (!teamId.value) {
+    ElMessage.error('无效的团队ID')
+    return
+  }
+
   try {
     await ElMessageBox.confirm('确定要移除该成员吗？', '确认操作', {
       confirmButtonText: '确定',
@@ -712,6 +809,11 @@ const handleEditTeam = async () => {
     return
   }
 
+  if (!teamId.value) {
+    ElMessage.error('无效的团队ID')
+    return
+  }
+
   submitting.value = true
   try {
     const response = await teamApi.updateTeam(teamId.value, editForm.value, currentUserId.value!)
@@ -730,6 +832,11 @@ const handleEditTeam = async () => {
 
 // 解散团队
 const handleDissolveTeam = async () => {
+  if (!teamId.value) {
+    ElMessage.error('无效的团队ID')
+    return
+  }
+
   try {
     await ElMessageBox.confirm(
       '解散团队后将无法恢复，确定要解散吗？',
@@ -758,6 +865,11 @@ const handleDissolveTeam = async () => {
 
 // 退出团队
 const handleLeaveTeam = async () => {
+  if (!teamId.value) {
+    ElMessage.error('无效的团队ID')
+    return
+  }
+
   try {
     await ElMessageBox.confirm('确定要退出该团队吗？', '确认退出', {
       confirmButtonText: '确定',
@@ -782,6 +894,11 @@ const handleLeaveTeam = async () => {
 
 // 申请加入
 const handleApplyToJoin = async () => {
+  if (!teamId.value) {
+    ElMessage.error('无效的团队ID')
+    return
+  }
+
   try {
     const { value: message } = await ElMessageBox.prompt('请输入申请理由（可选）', '申请加入团队', {
       confirmButtonText: '提交申请',

@@ -235,7 +235,7 @@ public class CompetitionController {
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size) {
         try {
-            Pageable pageable = PageRequest.of(page, size, Sort.by("createdAt").descending());
+            Pageable pageable = PageRequest.of(page, size, Sort.by("created_at").descending());
             Page<Competition> competitions = competitionService.getCompetitionsByStatus(status, pageable);
             return ResponseEntity.ok(Map.of(
                 "success", true,
@@ -258,7 +258,7 @@ public class CompetitionController {
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size) {
         try {
-            Pageable pageable = PageRequest.of(page, size, Sort.by("createdAt").descending());
+            Pageable pageable = PageRequest.of(page, size, Sort.by("created_at").descending());
             Page<Competition> competitions = competitionService.getCompetitionsByCategory(category, Competition.CompetitionStatus.PUBLISHED, pageable);
             return ResponseEntity.ok(Map.of(
                 "success", true,
@@ -281,7 +281,7 @@ public class CompetitionController {
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size) {
         try {
-            Pageable pageable = PageRequest.of(page, size, Sort.by("createdAt").descending());
+            Pageable pageable = PageRequest.of(page, size, Sort.by("created_at").descending());
             Page<Competition> competitions = competitionService.getCompetitionsByLevel(level, Competition.CompetitionStatus.PUBLISHED, pageable);
             return ResponseEntity.ok(Map.of(
                 "success", true,
@@ -304,7 +304,7 @@ public class CompetitionController {
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size) {
         try {
-            Pageable pageable = PageRequest.of(page, size, Sort.by("createdAt").descending());
+            Pageable pageable = PageRequest.of(page, size, Sort.by("created_at").descending());
             Page<Competition> competitions = competitionService.searchCompetitions(keyword, pageable);
             return ResponseEntity.ok(Map.of(
                 "success", true,
@@ -412,7 +412,7 @@ public class CompetitionController {
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size) {
         try {
-            Pageable pageable = PageRequest.of(page, size, Sort.by("createdAt").descending());
+            Pageable pageable = PageRequest.of(page, size, Sort.by("created_at").descending());
             Page<Competition> competitions = competitionService.getCompetitionsByCreator(userId, pageable);
             return ResponseEntity.ok(Map.of(
                 "success", true,
@@ -658,7 +658,7 @@ public class CompetitionController {
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size) {
         try {
-            Pageable pageable = PageRequest.of(page, size, Sort.by("createdAt").descending());
+            Pageable pageable = PageRequest.of(page, size, Sort.by("created_at").descending());
             Page<Competition> competitions = competitionService.getPendingApprovalCompetitions(pageable);
             return ResponseEntity.ok(Map.of(
                 "success", true,

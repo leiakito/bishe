@@ -298,7 +298,13 @@ public class RegistrationService {
     }
     
     public List<Registration> getUserRegistrationsInCompetition(Long userId, Long competitionId) {
-        return registrationRepository.findBySubmittedById(userId);
+        // 获取用户的所有报名记录
+        List<Registration> allRegistrations = registrationRepository.findBySubmittedById(userId);
+
+        // 过滤出指定竞赛的报名记录
+        return allRegistrations.stream()
+            .filter(reg -> reg.getCompetition() != null && reg.getCompetition().getId().equals(competitionId))
+            .collect(java.util.stream.Collectors.toList());
     }
     
     public boolean existsByTeamAndCompetition(Long teamId, Long competitionId) {

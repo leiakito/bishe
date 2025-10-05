@@ -100,13 +100,32 @@ public class TeamService {
         return teamRepository.findAllWithDetails(pageable);
     }
     
-    // 根据竞赛获取团队
+    // 根据竞赛获取团队（旧方法，仅查询直接关联的团队）
     public Page<Team> getTeamsByCompetition(Long competitionId, Pageable pageable) {
         Optional<Competition> competitionOpt = competitionRepository.findById(competitionId);
         if (competitionOpt.isEmpty()) {
             throw new RuntimeException("竞赛不存在");
         }
         return teamRepository.findByCompetitionId(competitionOpt.get().getId(), pageable);
+    }
+
+    // 根据竞赛获取所有相关团队（包括通过报名记录关联的团队）
+    public Page<Team> getAllTeamsByCompetition(Long competitionId, Pageable pageable) {
+        Optional<Competition> competitionOpt = competitionRepository.findById(competitionId);
+        if (competitionOpt.isEmpty()) {
+            throw new RuntimeException("竞赛不存在");
+        }
+        // 使用新方法：查询直接关联的团队 + 通过报名记录关联的团队
+        return teamRepository.findTeamsByCompetitionIncludingRegistrations(competitionId, pageable);
+    }
+
+    // 获取竞赛的报名团队（仅通过报名记录关联）
+    public Page<Team> getRegisteredTeamsByCompetition(Long competitionId, Pageable pageable) {
+        Optional<Competition> competitionOpt = competitionRepository.findById(competitionId);
+        if (competitionOpt.isEmpty()) {
+            throw new RuntimeException("竞赛不存在");
+        }
+        return teamRepository.findRegisteredTeamsByCompetition(competitionId, pageable);
     }
     
     // 根据状态获取团队

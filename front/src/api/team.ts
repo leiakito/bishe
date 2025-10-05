@@ -95,10 +95,11 @@ export const getAllTeams = async (params?: {
 
     // 响应拦截器已经返回了完整对象 { success, data, totalElements, ... }
     // 不需要再次访问 response.data
-    const success = response.success !== false
-    const data = response.data || []
-    const totalElements = response.totalElements || 0
-    const totalPages = response.totalPages || 0
+    const responseData = response as any
+    const success = responseData.success !== false
+    const data = responseData.data || []
+    const totalElements = responseData.totalElements || 0
+    const totalPages = responseData.totalPages || 0
 
     console.log('解析结果:')
     console.log('  - success:', success)
@@ -111,8 +112,8 @@ export const getAllTeams = async (params?: {
       data: data,
       totalElements: totalElements,
       totalPages: totalPages,
-      currentPage: response.currentPage || 0,
-      size: response.size || params?.size || 10
+      currentPage: responseData.currentPage || 0,
+      size: responseData.size || params?.size || 10
     }
   } catch (error: any) {
     console.error('=== getAllTeams API 错误 ===')
@@ -162,19 +163,25 @@ export const getTeamsByCompetition = async (
       size: params?.size || 10
     })
 
-    const responseData = response.data || response
+    console.log('getTeamsByCompetition API响应:', response)
+
+    // 响应拦截器已经返回了完整对象 {success, data, totalElements, ...}
+    // 直接使用，不需要再访问 response.data
     return {
-      success: responseData.success !== false,
-      data: responseData.data || [],
-      totalElements: responseData.totalElements || 0,
-      totalPages: responseData.totalPages || 0
+      success: response.success !== false,
+      data: response.data || [],
+      totalElements: response.totalElements || 0,
+      totalPages: response.totalPages || 0,
+      currentPage: response.currentPage || 0
     }
   } catch (error) {
     console.error('获取竞赛团队列表失败:', error)
     return {
       success: false,
       message: '获取竞赛团队列表失败',
-      data: []
+      data: [],
+      totalElements: 0,
+      totalPages: 0
     }
   }
 }
@@ -190,19 +197,21 @@ export const getTeamsByStatus = async (
       size: params?.size || 10
     })
 
-    const responseData = response.data || response
+    // 响应拦截器已经返回了完整对象，直接使用
     return {
-      success: responseData.success !== false,
-      data: responseData.data || [],
-      totalElements: responseData.totalElements || 0,
-      totalPages: responseData.totalPages || 0
+      success: response.success !== false,
+      data: response.data || [],
+      totalElements: response.totalElements || 0,
+      totalPages: response.totalPages || 0
     }
   } catch (error) {
     console.error('获取团队列表失败:', error)
     return {
       success: false,
       message: '获取团队列表失败',
-      data: []
+      data: [],
+      totalElements: 0,
+      totalPages: 0
     }
   }
 }
@@ -219,19 +228,21 @@ export const searchTeams = async (
       size: params?.size || 10
     })
 
-    const responseData = response.data || response
+    // 响应拦截器已经返回了完整对象，直接使用
     return {
-      success: responseData.success !== false,
-      data: responseData.data || [],
-      totalElements: responseData.totalElements || 0,
-      totalPages: responseData.totalPages || 0
+      success: response.success !== false,
+      data: response.data || [],
+      totalElements: response.totalElements || 0,
+      totalPages: response.totalPages || 0
     }
   } catch (error) {
     console.error('搜索团队失败:', error)
     return {
       success: false,
       message: '搜索团队失败',
-      data: []
+      data: [],
+      totalElements: 0,
+      totalPages: 0
     }
   }
 }
@@ -274,11 +285,12 @@ export const getMyTeams = async (params?: { page?: number; size?: number }) => {
 
     // 响应拦截器已经返回了完整的响应对象 {success, data, totalElements, totalPages}
     // 所以直接使用 response 即可
+    const responseData = response as any
     return {
-      success: response.success !== false,
-      data: response.data || [],
-      totalElements: response.totalElements || 0,
-      totalPages: response.totalPages || 0
+      success: responseData.success !== false,
+      data: responseData.data || [],
+      totalElements: responseData.totalElements || 0,
+      totalPages: responseData.totalPages || 0
     }
   } catch (error) {
     console.error('获取我的团队失败:', error)
@@ -345,10 +357,11 @@ export const getAvailableTeams = async (
     console.log('响应键:', Object.keys(response))
 
     // 响应拦截器已经返回了完整对象 { success, data, totalElements, ... }
-    const success = response.success !== false
-    const data = response.data || []
-    const totalElements = response.totalElements || 0
-    const totalPages = response.totalPages || 0
+    const responseData = response as any
+    const success = responseData.success !== false
+    const data = responseData.data || []
+    const totalElements = responseData.totalElements || 0
+    const totalPages = responseData.totalPages || 0
 
     console.log('解析结果:')
     console.log('  - success:', success)

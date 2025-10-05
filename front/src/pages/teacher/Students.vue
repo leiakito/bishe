@@ -1,12 +1,12 @@
 <template>
-  <div class="students-page">
-    <div class="page-header">
+  <div class="min-h-screen bg-gray-50 p-4 md:p-6 lg:p-8">
+    <div class="page-header mb-6">
       <h1 class="text-2xl font-bold text-gray-900">学生管理</h1>
       <p class="text-gray-600 mt-2">管理和查看您指导的学生信息</p>
     </div>
 
-    <div class="content-area mt-6">
-      <div class="bg-white rounded-lg shadow p-6">
+    <div class="content-area">
+      <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-4 md:p-6">
         <div class="flex justify-between items-center mb-4">
           <h2 class="text-lg font-semibold">学生列表</h2>
           <div class="flex space-x-2">
@@ -175,14 +175,6 @@ onMounted(() => {
 </script>
 
 <style scoped>
-.students-page {
-  padding: 24px;
-}
-
-.page-header {
-  margin-bottom: 24px;
-}
-
 .content-area {
   max-width: 1200px;
 }

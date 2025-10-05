@@ -23,6 +23,7 @@ export interface User {
   role: UserRole
   status: UserStatus
   avatar?: string
+  title?: string  // 职称信息
   studentId?: string  // 后端返回的学号字段
   schoolName?: string  // 后端返回的学院字段
   college?: string  // 兼容旧字段
@@ -30,7 +31,6 @@ export interface User {
   major?: string
   grade?: string
   className?: string
-  bio?: string
   createdAt?: string
   updatedAt?: string
   lastLoginAt?: string
@@ -90,7 +90,6 @@ export interface UserUpdateRequest {
   major?: string
   grade?: string
   className?: string
-  bio?: string
 }
 
 // 修改密码请求

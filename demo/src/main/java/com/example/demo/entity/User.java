@@ -63,9 +63,6 @@ public class User {
     @Column(name = "department")
     private String department;
 
-    @Column(name = "avatar_url")
-    private String avatarUrl;
-
     @Column(name = "employee_id")
     private String employeeId;
 
@@ -213,14 +210,6 @@ public class User {
 
     public void setDepartment(String department) {
         this.department = department;
-    }
-
-    public String getAvatarUrl() {
-        return avatarUrl;
-    }
-
-    public void setAvatarUrl(String avatarUrl) {
-        this.avatarUrl = avatarUrl;
     }
 
     public LocalDateTime getCreatedAt() {

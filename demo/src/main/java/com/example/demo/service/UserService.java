@@ -633,14 +633,7 @@ public class UserService {
                 existingUser.setPhone(phone);
             }
         }
-        
-        if (updateRequest.containsKey("avatarUrl")) {
-            String avatarUrl = (String) updateRequest.get("avatarUrl");
-            if (avatarUrl != null) {
-                existingUser.setAvatarUrl(avatarUrl);
-            }
-        }
-        
+
         if (updateRequest.containsKey("schoolName")) {
             String schoolName = (String) updateRequest.get("schoolName");
             if (schoolName != null) {
@@ -709,12 +702,7 @@ public class UserService {
             }
             existingUser.setPhone(updateRequest.getPhone());
         }
-        
-        // 更新头像URL
-        if (updateRequest.getAvatarUrl() != null) {
-            existingUser.setAvatarUrl(updateRequest.getAvatarUrl());
-        }
-        
+
         // 更新学校名称
         if (updateRequest.getSchoolName() != null) {
             existingUser.setSchoolName(updateRequest.getSchoolName());
@@ -724,7 +712,12 @@ public class UserService {
         if (updateRequest.getDepartment() != null) {
             existingUser.setDepartment(updateRequest.getDepartment());
         }
-        
+
+        // 更新职称
+        if (updateRequest.getTitle() != null) {
+            existingUser.setTitle(updateRequest.getTitle().trim());
+        }
+
         // 更新时间戳
         existingUser.setUpdatedAt(LocalDateTime.now());
         

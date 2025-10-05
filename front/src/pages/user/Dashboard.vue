@@ -161,6 +161,7 @@ import { useAuthStore } from '@/stores/auth'
 import { ElMessage } from 'element-plus'
 import { request } from '@/utils/request'
 import type { ApiResponse } from '@/types'
+import { getMyTeams } from '@/api/team'
 import {
   User,
   UserFilled,
@@ -363,14 +364,20 @@ const api = {
 const fetchDashboardData = async () => {
   try {
     loading.value = true
-    // 这里可以调用API获取仪表盘数据
-    // 模拟数据
+    
+    // 获取用户的团队数据
+    const teamsResponse = await getMyTeams({ page: 0, size: 100 })
+    const myTeamsCount = teamsResponse.success ? (teamsResponse.totalElements || 0) : 0
+    
+    // 设置统计数据
     stats.value = {
-      myTeams: 3,
-      myCompetitions: 5,
-      ongoingCompetitions: 8,
-      myGrades: 12
+      myTeams: myTeamsCount,
+      myCompetitions: 0, // TODO: 需要实现获取用户参与竞赛的API
+      ongoingCompetitions: 0, // TODO: 需要实现获取进行中竞赛的API
+      myGrades: 0 // TODO: 需要实现获取用户成绩的API
     }
+    
+    console.log('仪表盘数据获取成功:', stats.value)
   } catch (error) {
     console.error('获取仪表盘数据失败:', error)
     ElMessage.error('获取仪表盘数据失败，请刷新页面重试')

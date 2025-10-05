@@ -36,7 +36,19 @@ service.interceptors.request.use(
 service.interceptors.response.use(
   (response: AxiosResponse) => {
     const { data } = response
-    
+
+    // 如果是Blob类型（文件下载），直接返回
+    if (data instanceof Blob) {
+      console.log('API响应拦截器 - Blob响应，直接返回')
+      return response
+    }
+
+    // 如果不是对象类型（可能是字符串、数字等），直接返回
+    if (typeof data !== 'object' || data === null) {
+      console.log('API响应拦截器 - 非对象响应，直接返回')
+      return data
+    }
+
     // 添加调试日志
     console.log('API响应拦截器 - 原始响应:', {
       url: response.config?.url,
@@ -47,7 +59,7 @@ service.interceptors.response.use(
       dataKeys: Object.keys(data),
       dataDetail: JSON.stringify(data)
     })
-    
+
     // 检查是否有success字段
     if ('success' in data) {
       // 如果响应成功
@@ -55,7 +67,7 @@ service.interceptors.response.use(
         console.log('API响应拦截器 - 成功响应，返回data')
         return data  // 直接返回数据，而不是整个response
       }
-      
+
       // 如果响应失败，但状态码是200，说明是业务逻辑错误
       if (data.success === false) {
         console.log('API响应拦截器 - 业务逻辑错误:', data.message)
@@ -67,7 +79,7 @@ service.interceptors.response.use(
         return Promise.reject(new Error(data.message || '请求失败'))
       }
     }
-    
+
     // 对于没有success字段的响应，直接返回原始数据
     console.log('API响应拦截器 - 无success字段，直接返回原始数据')
     return data

@@ -786,20 +786,31 @@ const handleExportLogs = async () => {
       level: logFilter.level || undefined,
       keyword: logFilter.keyword || undefined
     }
-    
+
     const response = await api.exportLogs(params)
-    
-    // 创建下载链接
-    const blob = new Blob([response.data], { type: 'application/octet-stream' })
+
+    // 从响应头获取文件名，如果没有则使用默认文件名
+    const contentDisposition = response.headers['content-disposition']
+    let filename = `system-logs-${new Date().toISOString().split('T')[0]}.txt`
+
+    if (contentDisposition) {
+      const filenameMatch = contentDisposition.match(/filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/)
+      if (filenameMatch && filenameMatch[1]) {
+        filename = filenameMatch[1].replace(/['"]/g, '')
+      }
+    }
+
+    // 创建下载链接，强制使用text/plain类型
+    const blob = new Blob([response.data], { type: 'text/plain;charset=utf-8' })
     const url = window.URL.createObjectURL(blob)
     const link = document.createElement('a')
     link.href = url
-    link.download = `system-logs-${new Date().toISOString().split('T')[0]}.txt`
+    link.download = filename
     document.body.appendChild(link)
     link.click()
     document.body.removeChild(link)
     window.URL.revokeObjectURL(url)
-    
+
     ElMessage.success('日志导出成功')
   } catch (error: any) {
     console.error('日志导出失败:', error)

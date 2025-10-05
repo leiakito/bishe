@@ -1,14 +1,14 @@
 <template>
-  <div class="reports-page">
-    <div class="page-header">
+  <div class="min-h-screen bg-gray-50 p-4 md:p-6 lg:p-8">
+    <div class="page-header mb-6">
       <h1 class="text-2xl font-bold text-gray-900">成绩报告</h1>
       <p class="text-gray-600 mt-2">查看和分析学生竞赛成绩</p>
     </div>
 
-    <div class="content-area mt-6">
+    <div class="content-area">
       <!-- 统计概览 -->
-      <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-6">
-        <div class="bg-white rounded-lg shadow p-6">
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6 mb-6">
+        <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-4 md:p-6">
           <div class="flex items-center">
             <div class="p-2 bg-blue-100 rounded-lg">
               <svg class="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -22,7 +22,7 @@
           </div>
         </div>
         
-        <div class="bg-white rounded-lg shadow p-6">
+        <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-4 md:p-6">
           <div class="flex items-center">
             <div class="p-2 bg-green-100 rounded-lg">
               <svg class="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -36,7 +36,7 @@
           </div>
         </div>
         
-        <div class="bg-white rounded-lg shadow p-6">
+        <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-4 md:p-6">
           <div class="flex items-center">
             <div class="p-2 bg-yellow-100 rounded-lg">
               <svg class="w-6 h-6 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -50,7 +50,7 @@
           </div>
         </div>
         
-        <div class="bg-white rounded-lg shadow p-6">
+        <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-4 md:p-6">
           <div class="flex items-center">
             <div class="p-2 bg-purple-100 rounded-lg">
               <svg class="w-6 h-6 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -66,7 +66,7 @@
       </div>
 
       <!-- 成绩列表 -->
-      <div class="bg-white rounded-lg shadow p-6">
+      <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-4 md:p-6">
         <div class="flex justify-between items-center mb-4">
           <h2 class="text-lg font-semibold">学生成绩</h2>
           <div class="flex space-x-2">
@@ -245,14 +245,6 @@ onMounted(() => {
 </script>
 
 <style scoped>
-.reports-page {
-  padding: 24px;
-}
-
-.page-header {
-  margin-bottom: 24px;
-}
-
 .content-area {
   max-width: 1200px;
 }

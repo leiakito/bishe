@@ -47,3 +47,52 @@ export const getCompetitionStats = () => {
 export const getLogStats = () => {
   return request.get('/api/admin/logs/stats')
 }
+
+// 导出系统日志
+export const exportSystemLogs = async (params?: { startDate?: string; endDate?: string; logType?: string }) => {
+  try {
+    // 构建查询参数
+    const queryParams = new URLSearchParams()
+    queryParams.append('format', 'excel')
+
+    // 添加筛选参数
+    if (params) {
+      Object.entries(params).forEach(([key, value]) => {
+        if (value !== undefined && value !== null) {
+          queryParams.append(key, String(value))
+        }
+      })
+    }
+
+    const response = await request.get(`/api/admin/logs/export?${queryParams.toString()}`, {
+      responseType: 'blob'
+    }) as any
+
+    // 响应拦截器对blob会返回整个response对象，需要获取data
+    const blobData = response.data || response
+
+    // 创建下载链接
+    const blob = new Blob([blobData], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' })
+    const url = window.URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = url
+
+    // 生成文件名
+    const now = new Date()
+    const dateStr = now.toISOString().split('T')[0]
+    link.download = `system_logs_${dateStr}.xlsx`
+
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+    window.URL.revokeObjectURL(url)
+
+    return {
+      success: true,
+      message: '系统日志导出成功'
+    }
+  } catch (error) {
+    console.error('导出系统日志失败:', error)
+    throw error
+  }
+}
