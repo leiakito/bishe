@@ -118,8 +118,7 @@ public class TeamMemberService {
         if (!isTeamLeader && !isAdmin) {
             throw new RuntimeException("只有队长或管理员可以审核加入申请");
         }
-        
-        if (approved) {
+      if (approved) {
             // 再次检查团队是否已满
             // 统计活跃成员
             long currentMemberCount = teamMemberRepository.countActiveByTeamId(team.getId());
@@ -129,11 +128,28 @@ public class TeamMemberService {
             
             teamMember.setStatus(TeamMember.MemberStatus.ACTIVE);
             teamMember.setJoinedAt(LocalDateTime.now());
+            
+            TeamMember savedMember = teamMemberRepository.save(teamMember);
+            
+            // 同步更新团队的 currentMembers 字段
+            team.setCurrentMembers(teamMemberRepository.countActiveByTeamId(team.getId()).intValue());
+            
+            // 如果团队满员，更新状态
+            if (team.getCurrentMembers() >= team.getMaxMembers()) {
+                team.setStatus(Team.TeamStatus.FULL);
+            }
+            
+            teamRepository.save(team);
+            
+            return savedMember;
         } else {
-            teamMember.setStatus(TeamMember.MemberStatus.INACTIVE);
+            // 拒绝申请：直接删除记录，将成员踢出队伍
+            // PENDING 状态的成员不应该影响 currentMembers，所以不需要更新
+            teamMemberRepository.delete(teamMember);
+            
+            return teamMember; // 返回被删除的记录信息
         }
         
-        return teamMemberRepository.save(teamMember);
     }
     
     // 直接添加成员（队长或管理员）
@@ -206,7 +222,19 @@ public class TeamMemberService {
         teamMember.setStatus(TeamMember.MemberStatus.ACTIVE);
         teamMember.setJoinedAt(LocalDateTime.now());
         
-        return teamMemberRepository.save(teamMember);
+        TeamMember savedMember = teamMemberRepository.save(teamMember);
+        
+        // 同步更新团队的 currentMembers 字段
+        team.setCurrentMembers(teamMemberRepository.countActiveByTeamId(team.getId()).intValue());
+        
+        // 如果团队满员，更新状态
+        if (team.getCurrentMembers() >= team.getMaxMembers()) {
+            team.setStatus(Team.TeamStatus.FULL);
+        }
+        
+        teamRepository.save(team);
+        
+        return savedMember;
     }
     
     // 移除成员
@@ -244,10 +272,25 @@ public class TeamMemberService {
             throw new RuntimeException("队长不能被移除，请先转让队长职务");
         }
         
+        // 记录移除前的状态
+        boolean wasActive = teamMember.getStatus() == TeamMember.MemberStatus.ACTIVE;
+        
         teamMember.setStatus(TeamMember.MemberStatus.REMOVED);
         teamMember.setLeftAt(LocalDateTime.now());
         
         teamMemberRepository.save(teamMember);
+        
+        // 如果移除的是活跃成员，需要同步更新 currentMembers
+        if (wasActive) {
+            team.setCurrentMembers(teamMemberRepository.countActiveByTeamId(team.getId()).intValue());
+            
+            // 如果团队不再满员，更新状态
+            if (team.getStatus() == Team.TeamStatus.FULL && team.getCurrentMembers() < team.getMaxMembers()) {
+                team.setStatus(Team.TeamStatus.ACTIVE);
+            }
+            
+            teamRepository.save(team);
+        }
     }
     
     // 主动退出团队
@@ -277,10 +320,25 @@ public class TeamMemberService {
             }
         }
         
+        // 记录退出前的状态
+        boolean wasActive = teamMember.getStatus() == TeamMember.MemberStatus.ACTIVE;
+        
         teamMember.setStatus(TeamMember.MemberStatus.INACTIVE);
-        // 注意：setLeftAt方法不存在，已移除
+        teamMember.setLeftAt(LocalDateTime.now());
         
         teamMemberRepository.save(teamMember);
+        
+        // 如果退出的是活跃成员，需要同步更新 currentMembers
+        if (wasActive) {
+            team.setCurrentMembers(teamMemberRepository.countActiveByTeamId(team.getId()).intValue());
+            
+            // 如果团队不再满员，更新状态
+            if (team.getStatus() == Team.TeamStatus.FULL && team.getCurrentMembers() < team.getMaxMembers()) {
+                team.setStatus(Team.TeamStatus.ACTIVE);
+            }
+            
+            teamRepository.save(team);
+        }
     }
     
     // 转让队长职务

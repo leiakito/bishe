@@ -2,6 +2,7 @@ package com.example.demo.controller;
 
 import com.example.demo.entity.Team;
 import com.example.demo.entity.TeamMember;
+import com.example.demo.service.TeamMemberService;
 import com.example.demo.service.TeamService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
@@ -23,7 +24,10 @@ public class TeamController {
     
     @Autowired
     private TeamService teamService;
+
     
+    @Autowired
+    private TeamMemberService teamMemberService;
     // 创建团队
     @PostMapping
     public ResponseEntity<?> createTeam(@Valid @RequestBody Team team, 
@@ -125,17 +129,17 @@ public class TeamController {
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size) {
         try {
-            Pageable pageable = PageRequest.of(page, size, Sort.by("created_at").descending());
-
-            // 修改：使用新方法获取所有相关团队（包括通过报名记录关联的）
-            Page<Team> teams = teamService.getAllTeamsByCompetition(competitionId, pageable);
+            // 如果请求不分页（size为默认值10但前端可能传入很大的值来获取全部），
+            // 或者特殊参数，使用带leader的查询
+            // 为了简化，这里始终使用带leader信息的查询
+            List<Team> teams = teamService.getTeamsByCompetitionWithLeader(competitionId);
 
             return ResponseEntity.ok(Map.of(
                 "success", true,
-                "data", teams.getContent(),
-                "totalElements", teams.getTotalElements(),
-                "totalPages", teams.getTotalPages(),
-                "currentPage", teams.getNumber()
+                "data", teams,
+                "totalElements", teams.size(),
+                "totalPages", 1,
+                "currentPage", 0
             ));
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of(
@@ -392,13 +396,26 @@ public class TeamController {
                                             @RequestParam Long userId,
                                             @RequestBody(required = false) Map<String, String> request) {
         try {
+            System.out.println("=== applyToJoinTeam 调用 ===");
+            System.out.println("团队ID: " + id);
+            System.out.println("用户ID: " + userId);
+            
             String message = request != null ? request.get("message") : null;
-            // 申请加入团队的逻辑需要在TeamService中实现
+            
+            // 调用 TeamMemberService 保存申请记录到数据库
+            TeamMember teamMember = teamMemberService.applyToJoinTeam(id, userId);
+            
+            System.out.println("申请记录已保存到数据库，ID: " + teamMember.getId());
+            System.out.println("申请状态: " + teamMember.getStatus());
+            
             return ResponseEntity.ok(Map.of(
                 "success", true,
-                "message", "申请已提交"
+                "message", "申请已提交，等待队长审核",
+                "data", teamMember
             ));
         } catch (RuntimeException e) {
+            System.err.println("申请加入团队失败: " + e.getMessage());
+            e.printStackTrace();
             return ResponseEntity.badRequest().body(Map.of(
                 "success", false,
                 "message", e.getMessage()
@@ -412,8 +429,15 @@ public class TeamController {
                                                @PathVariable Long memberId,
                                                @RequestBody Map<String, Object> request) {
         try {
+            System.out.println("=== approveJoinRequest 调用 ===");
+            System.out.println("团队ID: " + id);
+            System.out.println("成员ID: " + memberId);
+            
             Boolean approved = (Boolean) request.get("approved");
             Long approvedBy = Long.valueOf(request.get("approvedBy").toString());
+            
+            System.out.println("审核结果: " + (approved ? "通过" : "拒绝"));
+            System.out.println("审核人ID: " + approvedBy);
             
             if (approved == null || approvedBy == null) {
                 return ResponseEntity.badRequest().body(Map.of(
@@ -422,14 +446,19 @@ public class TeamController {
                 ));
             }
             
-            // 审批加入请求的逻辑需要在TeamService中实现
-            TeamMember teamMember = null;
+            // 调用 TeamMemberService 保存审核结果到数据库
+            TeamMember teamMember = teamMemberService.approveJoinApplication(memberId, approvedBy, approved);
+            
+            System.out.println("审核完成，成员状态: " + teamMember.getStatus());
+            
             return ResponseEntity.ok(Map.of(
                 "success", true,
                 "message", approved ? "加入申请已通过" : "加入申请已拒绝",
                 "data", teamMember
             ));
         } catch (RuntimeException e) {
+            System.err.println("审核申请失败: " + e.getMessage());
+            e.printStackTrace();
             return ResponseEntity.badRequest().body(Map.of(
                 "success", false,
                 "message", e.getMessage()

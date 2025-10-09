@@ -93,8 +93,8 @@
             </div>
             <div class="flex flex-col">
               <span class="text-sm text-gray-500">状态</span>
-              <el-tag :type="getUserStatusType(teamDetail.leader.status)" size="small">
-                {{ getUserStatusText(teamDetail.leader.status) }}
+              <el-tag :type="getStatusType(teamDetail.leader.status)" size="small">
+               在线
               </el-tag>
             </div>
           </div>
@@ -192,9 +192,8 @@
             </div>
             <div class="ml-4">
               <p class="text-sm font-medium text-gray-600">当前成员</p>
-              <p class="text-2xl font-bold text-gray-900">
-                {{ teamDetail?.currentMembers || 0 }}/{{ teamDetail?.maxMembers || 0 }}
-              </p>
+                  
+              <p class="text-2xl font-bold text-gray-900">{{ activeMembers }}</p>
             </div>
           </div>
         </div>

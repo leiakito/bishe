@@ -132,6 +132,14 @@ public interface TeamRepository extends JpaRepository<Team, Long> {
     Page<Team> findTeamsCreatedByUser(@Param("userId") Long userId, Pageable pageable);
 
     // 通过报名记录查找竞赛的所有团队（包括直接关联和通过报名关联的）
+    // 使用JPQL主动加载leader，用于教师管理团队列表
+    @Query("SELECT DISTINCT t FROM Team t " +
+           "LEFT JOIN FETCH t.leader " +
+           "LEFT JOIN FETCH t.competition " +
+           "WHERE t.competition.id = :competitionId " +
+           "ORDER BY t.createdAt DESC")
+    List<Team> findTeamsByCompetitionWithLeader(@Param("competitionId") Long competitionId);
+
     @Query(value = "SELECT DISTINCT t.* FROM teams t " +
            "LEFT JOIN registrations r ON r.team_id = t.id " +
            "WHERE t.competition_id = :competitionId OR r.competition_id = :competitionId " +

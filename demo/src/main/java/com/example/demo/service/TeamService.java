@@ -119,6 +119,15 @@ public class TeamService {
         return teamRepository.findTeamsByCompetitionIncludingRegistrations(competitionId, pageable);
     }
 
+    // 获取竞赛的团队列表（带leader信息，用于教师管理）
+    public List<Team> getTeamsByCompetitionWithLeader(Long competitionId) {
+        Optional<Competition> competitionOpt = competitionRepository.findById(competitionId);
+        if (competitionOpt.isEmpty()) {
+            throw new RuntimeException("竞赛不存在");
+        }
+        return teamRepository.findTeamsByCompetitionWithLeader(competitionId);
+    }
+
     // 获取竞赛的报名团队（仅通过报名记录关联）
     public Page<Team> getRegisteredTeamsByCompetition(Long competitionId, Pageable pageable) {
         Optional<Competition> competitionOpt = competitionRepository.findById(competitionId);
@@ -291,8 +300,12 @@ public class TeamService {
         User operator = operatorOpt.get();
         boolean isCaptain = teamMemberRepository.isTeamLeader(team.getId(), operatorId);
         boolean isAdmin = operator.getRole() == User.UserRole.ADMIN;
-        
-        if (!isCaptain && !isAdmin) {
+        // 检查是否是竞赛创建者（教师）
+        boolean isCompetitionCreator = team.getCompetition() != null &&
+                                        team.getCompetition().getCreatedBy() != null &&
+                                        team.getCompetition().getCreatedBy().getId().equals(operatorId);
+
+        if (!isCaptain && !isAdmin && !isCompetitionCreator) {
             throw new RuntimeException("没有权限移除成员");
         }
         
@@ -490,8 +503,12 @@ public class TeamService {
         User user = userOpt.get();
         boolean isCaptain = teamMemberRepository.isTeamLeader(team.getId(), userId);
         boolean isAdmin = user.getRole() == User.UserRole.ADMIN;
-        
-        if (!isCaptain && !isAdmin) {
+        // 检查是否是竞赛创建者（教师）
+        boolean isCompetitionCreator = team.getCompetition() != null &&
+                                        team.getCompetition().getCreatedBy() != null &&
+                                        team.getCompetition().getCreatedBy().getId().equals(userId);
+
+        if (!isCaptain && !isAdmin && !isCompetitionCreator) {
             throw new RuntimeException("没有权限解散团队");
         }
         
@@ -516,8 +533,9 @@ public class TeamService {
         if (teamOpt.isEmpty()) {
             throw new RuntimeException("团队不存在");
         }
-        
-        return teamMemberRepository.findByTeamId(teamOpt.get().getId());
+
+        // 使用带用户信息急加载的查询方法，避免懒加载异常
+        return teamMemberRepository.findByTeamIdWithUser(teamOpt.get().getId());
     }
     
     // 获取待审核的成员申请

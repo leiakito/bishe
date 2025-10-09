@@ -89,8 +89,8 @@
       <div class="recent-activities bg-white rounded-lg shadow-sm border border-gray-200 p-6">
         <h2 class="text-lg font-semibold text-gray-800 mb-4">最近竞赛</h2>
         <div class="space-y-4">
-          <div v-for="competition in recentCompetitions" :key="competition.id" 
-               class="activity-item flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+          <div v-for="competition in recentCompetitions" :key="competition.id"
+               class="competition-item flex items-center justify-between p-4 bg-gray-50 rounded-lg">
             <div class="flex items-center space-x-3">
               <div class="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
                 <el-icon class="text-blue-600">
@@ -102,7 +102,7 @@
                 <p class="text-sm text-gray-600">{{ competition.date }}</p>
               </div>
             </div>
-            <span class="px-2 py-1 text-xs font-medium rounded-full" 
+            <span class="px-2 py-1 text-xs font-medium rounded-full"
                   :class="getStatusClass(competition.status)">
               {{ competition.status }}
             </span>
@@ -255,53 +255,112 @@ const statsLoading = ref(false)
 const systemNotices = ref<SystemNotice[]>([])
 const noticesLoading = ref<boolean>(false)
 
-const recentCompetitions = ref<Competition[]>([
-  {
-    id: 1,
-    name: '全国大学生数学建模竞赛',
-    date: '2024-01-15',
-    status: '进行中'
-  },
-  {
-    id: 2,
-    name: 'ACM程序设计竞赛',
-    date: '2024-01-10',
-    status: '已结束'
-  },
-  {
-    id: 3,
-    name: '创新创业大赛',
-    date: '2024-01-20',
-    status: '报名中'
-  }
-])
+const recentCompetitions = ref<Competition[]>([])
 
-const studentActivities = ref<StudentActivity[]>([
-  {
-    id: 1,
-    student: '张三',
-    action: '提交了数学建模竞赛作品',
-    time: '2小时前'
-  },
-  {
-    id: 2,
-    student: '李四',
-    action: '加入了ACM竞赛团队',
-    time: '4小时前'
-  },
-  {
-    id: 3,
-    student: '王五',
-    action: '更新了个人资料',
-    time: '1天前'
-  },
-  {
-    id: 4,
-    student: '赵六',
-    action: '完成了团队组建',
-    time: '2天前'
+const studentActivities = ref<StudentActivity[]>([])
+
+// 竞赛名称池
+const competitionNames = [
+  '全国大学生数学建模竞赛',
+  'ACM程序设计竞赛',
+  '创新创业大赛',
+  '互联网+大学生创新创业大赛',
+  '全国大学生电子设计竞赛',
+  '挑战杯全国大学生课外学术科技作品竞赛',
+  '中国大学生计算机设计大赛',
+  '蓝桥杯全国软件和信息技术专业人才大赛',
+  '全国大学生机器人大赛',
+  '全国大学生智能汽车竞赛'
+]
+
+// 学生姓名池
+const studentNames = [
+  '张三', '李四', '王五', '赵六', '钱七', '孙八',
+  '周九', '吴十', '郑一', '王二', '冯三', '陈四',
+  '褚五', '卫六', '蒋七', '沈八', '韩九', '杨十'
+]
+
+// 学生动作池
+const studentActions = [
+  '提交了数学建模竞赛作品',
+  '加入了ACM竞赛团队',
+  '更新了个人资料',
+  '完成了团队组建',
+  '上传了竞赛材料',
+  '修改了团队信息',
+  '退出了某个团队',
+  '申请加入新团队',
+  '提交了项目报告',
+  '完成了队员招募',
+  '更新了竞赛进度',
+  '发布了团队公告'
+]
+
+// 状态池
+const statuses = ['进行中', '已结束', '报名中']
+
+// 生成随机日期（最近30天内）
+const generateRandomDate = () => {
+  const today = new Date()
+  const daysAgo = Math.floor(Math.random() * 30)
+  const date = new Date(today.getTime() - daysAgo * 24 * 60 * 60 * 1000)
+  return date.toISOString().split('T')[0]
+}
+
+// 生成随机时间描述
+const generateRandomTime = () => {
+  const random = Math.random()
+  if (random < 0.3) {
+    const minutes = Math.floor(Math.random() * 60) + 1
+    return `${minutes}分钟前`
+  } else if (random < 0.6) {
+    const hours = Math.floor(Math.random() * 24) + 1
+    return `${hours}小时前`
+  } else {
+    const days = Math.floor(Math.random() * 7) + 1
+    return `${days}天前`
   }
-])
+}
+
+// 随机打乱数组
+const shuffleArray = <T,>(array: T[]): T[] => {
+  const newArray = [...array]
+  for (let i = newArray.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [newArray[i], newArray[j]] = [newArray[j], newArray[i]]
+  }
+  return newArray
+}
+
+// 生成随机竞赛数据
+const generateRandomCompetitions = () => {
+  const shuffledNames = shuffleArray(competitionNames)
+  const count = Math.floor(Math.random() * 3) + 3 // 3-5个竞赛
+
+  recentCompetitions.value = shuffledNames.slice(0, count).map((name, index) => ({
+    id: index + 1,
+    name,
+    date: generateRandomDate(),
+    status: statuses[Math.floor(Math.random() * statuses.length)]
+  }))
+
+  // 按日期排序（最新的在前面）
+  recentCompetitions.value.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+}
+
+// 生成随机学生动态数据
+const generateRandomActivities = () => {
+  const shuffledStudents = shuffleArray(studentNames)
+  const shuffledActions = shuffleArray(studentActions)
+  const count = Math.floor(Math.random() * 3) + 4 // 4-6个动态
+
+  studentActivities.value = Array.from({ length: count }, (_, index) => ({
+    id: index + 1,
+    student: shuffledStudents[index % shuffledStudents.length],
+    action: shuffledActions[index % shuffledActions.length],
+    time: generateRandomTime()
+  }))
+}
 
 // 方法
 const getStatusClass = (status: string) => {
@@ -456,6 +515,8 @@ const loadStats = async () => {
 onMounted(() => {
   loadSystemNotices()
   loadStats()
+  generateRandomCompetitions()
+  generateRandomActivities()
 })
 </script>
 
@@ -473,15 +534,22 @@ onMounted(() => {
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
 }
 
+.competition-item {
+  transition: all 0.2s ease;
+}
+
+.competition-item:hover {
+  background-color: #e0f2fe;
+  transform: translateX(4px);
+  box-shadow: 0 2px 8px rgba(59, 130, 246, 0.15);
+}
+
 .activity-item {
   transition: background-color 0.2s;
 }
 
 .activity-item:hover {
-  background-color: #f9fafb;
-  border-radius: 6px;
-  padding: 8px;
-  margin: -8px;
+  background-color: #f3f4f6;
 }
 
 .notice-item {

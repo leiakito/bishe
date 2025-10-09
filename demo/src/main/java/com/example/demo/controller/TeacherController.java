@@ -475,15 +475,43 @@ public class TeacherController {
             competition.setDescription((String) competitionData.get("description"));
             competition.setRules((String) competitionData.get("rules"));
             competition.setMaxParticipants((Integer) competitionData.get("maxParticipants"));
-            
+
+            // 设置团队人数限制
+            if (competitionData.get("minTeamSize") != null) {
+                competition.setMinTeamSize((Integer) competitionData.get("minTeamSize"));
+            }
+            if (competitionData.get("maxTeamSize") != null) {
+                competition.setMaxTeamSize((Integer) competitionData.get("maxTeamSize"));
+            }
+            if (competitionData.get("maxTeams") != null) {
+                competition.setMaxTeams((Integer) competitionData.get("maxTeams"));
+            }
+
+            // 设置其他可选字段
+            if (competitionData.get("location") != null) {
+                competition.setLocation((String) competitionData.get("location"));
+            }
+            if (competitionData.get("organizer") != null) {
+                competition.setOrganizer((String) competitionData.get("organizer"));
+            }
+            if (competitionData.get("contactInfo") != null) {
+                competition.setContactInfo((String) competitionData.get("contactInfo"));
+            }
+            if (competitionData.get("prizeInfo") != null) {
+                competition.setPrizeInfo((String) competitionData.get("prizeInfo"));
+            }
+            if (competitionData.get("registrationFee") != null) {
+                competition.setRegistrationFee(((Number) competitionData.get("registrationFee")).doubleValue());
+            }
+
             // 定义时间格式解析器，支持前端发送的格式 "YYYY-MM-DD HH:mm:ss"
             DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
-            
+
             competition.setRegistrationStartTime(LocalDateTime.parse((String) competitionData.get("registrationStartTime"), formatter));
             competition.setRegistrationEndTime(LocalDateTime.parse((String) competitionData.get("registrationEndTime"), formatter));
             competition.setStartTime(LocalDateTime.parse((String) competitionData.get("startTime"), formatter));
             competition.setEndTime(LocalDateTime.parse((String) competitionData.get("endTime"), formatter));
-            
+
             // 设置分类和级别
             if (competitionData.get("category") != null) {
                 competition.setCategory(Competition.CompetitionCategory.valueOf((String) competitionData.get("category")));

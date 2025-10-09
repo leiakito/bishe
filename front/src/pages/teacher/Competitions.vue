@@ -248,9 +248,7 @@
                   >
                     编辑
                   </el-button>
-                  <el-button type="success" size="small" @click="handleView(competition)" :icon="View">
-                    查看
-                  </el-button>
+               
                   <el-button type="info" size="small" @click="handleManage(competition)" :icon="Setting">
                     管理
                   </el-button>
@@ -570,6 +568,146 @@
         </div>
       </template>
     </el-dialog>
+
+    <!-- 团队管理弹窗 -->
+    <el-dialog
+      v-model="teamsDialogVisible"
+      :title="`团队管理 - ${selectedCompetition?.name}`"
+      width="900px"
+      :close-on-click-modal="false"
+    >
+      <div v-loading="teamsLoading">
+        <!-- 团队列表 -->
+        <el-table
+          :data="teams"
+          stripe
+          border
+          class="w-full"
+        >
+          <el-table-column prop="name" label="团队名称" min-width="150" />
+
+        
+          <el-table-column prop="currentMembers" label="人数" width="80" align="center">
+            <template #default="{ row }">
+              {{ row.currentMembers || 0 }}/{{ row.maxMembers || '-' }}
+            </template>
+          </el-table-column>
+
+          <el-table-column prop="status" label="状态" width="100">
+            <template #default="{ row }">
+              <el-tag v-if="row.status === 'ACTIVE'" type="success" size="small">活跃</el-tag>
+              <el-tag v-else-if="row.status === 'FULL'" type="warning" size="small">已满</el-tag>
+              <el-tag v-else-if="row.status === 'DISBANDED'" type="info" size="small">已解散</el-tag>
+              <el-tag v-else type="info" size="small">{{ row.status }}</el-tag>
+            </template>
+          </el-table-column>
+
+          <el-table-column prop="createdAt" label="创建时间" width="180">
+            <template #default="{ row }">
+              {{ formatDateTime(row.createdAt) }}
+            </template>
+          </el-table-column>
+
+          <el-table-column label="操作" width="200" fixed="right">
+            <template #default="{ row }">
+              <el-button
+                type="primary"
+                size="small"
+                @click="handleViewTeamMembers(row)"
+                :icon="User"
+                link
+              >
+                成员管理
+              </el-button>
+              <el-button
+                type="danger"
+                size="small"
+                @click="handleDissolveTeam(row)"
+                :icon="Delete"
+                link
+              >
+                解散
+              </el-button>
+            </template>
+          </el-table-column>
+        </el-table>
+
+        <!-- 空状态 -->
+        <div v-if="!teamsLoading && teams.length === 0" class="text-center py-8 text-gray-500">
+          该竞赛暂无报名团队
+        </div>
+      </div>
+    </el-dialog>
+
+    <!-- 成员管理弹窗 -->
+    <el-dialog
+      v-model="membersDialogVisible"
+      :title="`成员管理 - ${selectedTeam?.name}`"
+      width="800px"
+      :close-on-click-modal="false"
+    >
+      <div v-loading="membersLoading">
+        <!-- 成员列表 -->
+        <el-table
+          :data="teamMembers"
+          stripe
+          border
+          class="w-full"
+        >
+          <el-table-column prop="user.realName" label="姓名" width="120">
+            <template #default="{ row }">
+              {{ row.user?.realName || row.user?.username || '未知' }}
+            </template>
+          </el-table-column>
+
+          <el-table-column prop="user.studentId" label="学号" width="150">
+            <template #default="{ row }">
+              {{ row.user?.studentId || '-' }}
+            </template>
+          </el-table-column>
+
+          <el-table-column prop="role" label="角色" width="100">
+            <template #default="{ row }">
+              <el-tag v-if="row.role === 'LEADER'" type="danger" size="small">队长</el-tag>
+              <el-tag v-else type="info" size="small">队员</el-tag>
+            </template>
+          </el-table-column>
+
+          <el-table-column prop="user.email" label="邮箱" min-width="200">
+            <template #default="{ row }">
+              {{ row.user?.email || '-' }}
+            </template>
+          </el-table-column>
+
+          <el-table-column prop="joinedAt" label="加入时间" width="180">
+            <template #default="{ row }">
+              {{ formatDateTime(row.joinedAt) }}
+            </template>
+          </el-table-column>
+
+          <el-table-column label="操作" width="120" fixed="right">
+            <template #default="{ row }">
+              <el-button
+                v-if="row.role !== 'LEADER'"
+                type="danger"
+                size="small"
+                @click="handleRemoveMember(row)"
+                :icon="Delete"
+                link
+              >
+                移除
+              </el-button>
+              <span v-else class="text-gray-400 text-xs">队长</span>
+            </template>
+          </el-table-column>
+        </el-table>
+
+        <!-- 空状态 -->
+        <div v-if="!membersLoading && teamMembers.length === 0" class="text-center py-8 text-gray-500">
+          该团队暂无成员
+        </div>
+      </div>
+    </el-dialog>
   </div>
 </template>
 
@@ -578,7 +716,7 @@ import { ref, reactive, onMounted, nextTick, computed, watch } from 'vue'
 import { ElMessage, ElMessageBox, type FormInstance, type FormRules } from 'element-plus'
 import {
   Plus, Trophy, Loading, Search, Refresh, Sort, SortUp, SortDown,
-  Calendar, Timer, Collection, Location, OfficeBuilding, View, Edit, Setting, Delete
+  Calendar, Timer, Collection, Location, OfficeBuilding, View, Edit, Setting, Delete, User
 } from '@element-plus/icons-vue'
 import {
   createTeacherCompetition,
@@ -587,6 +725,12 @@ import {
   deleteTeacherCompetition,
   getCompetitionStats
 } from '@/api/competition'
+import {
+  getTeamsByCompetition,
+  getTeamMembers,
+  dissolveTeam,
+  removeMember
+} from '@/api/team'
 import { useAuthStore } from '@/stores/auth'
 import type { 
   Competition, 
@@ -651,6 +795,18 @@ const queryParams = reactive<CompetitionQueryParams>({
 const pagination = reactive<PaginationInfo>({
   ...DEFAULT_PAGINATION
 })
+
+// 团队管理相关状态
+const selectedCompetition = ref<Competition | null>(null)
+const teamsDialogVisible = ref(false)
+const teams = ref<any[]>([])
+const teamsLoading = ref(false)
+
+// 成员管理相关状态
+const selectedTeam = ref<any | null>(null)
+const membersDialogVisible = ref(false)
+const teamMembers = ref<any[]>([])
+const membersLoading = ref(false)
 
 // 表单引用
 const formRef = ref<FormInstance>()
@@ -1047,14 +1203,199 @@ const handleEdit = (competition: Competition) => {
   dialogVisible.value = true
 }
 
-// 查看竞赛
-const handleView = (competition: Competition) => {
-  ElMessage.info('查看功能待实现')
-}
+
 
 // 管理竞赛
-const handleManage = (competition: Competition) => {
-  ElMessage.info('管理功能待实现')
+// 团队管理
+const handleManage = async (competition: Competition) => {
+  selectedCompetition.value = competition
+  teamsDialogVisible.value = true
+  await loadCompetitionTeams(competition.id!)
+}
+
+// 加载竞赛的所有团队
+const loadCompetitionTeams = async (competitionId: number) => {
+  try {
+    teamsLoading.value = true
+    const response = await getTeamsByCompetition(competitionId)
+
+    console.log('获取竞赛团队响应:', response)
+
+    if (response && response.success !== false) {
+      teams.value = response.data || []
+      console.log('获取到团队列表:', teams.value.length, teams.value)
+    } else {
+      ElMessage.error(response?.message || '获取团队列表失败')
+      teams.value = []
+    }
+  } catch (error) {
+    console.error('获取团队列表失败:', error)
+    ElMessage.error('获取团队列表失败')
+    teams.value = []
+  } finally {
+    teamsLoading.value = false
+  }
+}
+
+// 查看团队成员
+const handleViewTeamMembers = async (team: any) => {
+  selectedTeam.value = team
+  membersDialogVisible.value = true
+  await loadTeamMembers(team.id)
+}
+
+// 加载团队成员
+const loadTeamMembers = async (teamId: number) => {
+  try {
+    membersLoading.value = true
+    const response = await getTeamMembers(teamId)
+
+    console.log('获取团队成员响应:', response)
+
+    if (response && response.success !== false) {
+      const memberData = response.data || []
+
+      // 处理成员数据
+      if (Array.isArray(memberData)) {
+        teamMembers.value = memberData.map((member: any) => {
+          if (member.user) {
+            return {
+              ...member,
+              user: {
+                realName: member.user.realName || member.user.username || '未知',
+                username: member.user.username || '未知',
+                studentId: member.user.studentId || '-',
+                email: member.user.email || '-',
+                ...member.user
+              }
+            }
+          }
+          return member
+        })
+      } else {
+        teamMembers.value = []
+      }
+
+      console.log('获取到团队成员:', teamMembers.value.length, teamMembers.value)
+    } else {
+      ElMessage.error(response?.message || '获取团队成员失败')
+      teamMembers.value = []
+    }
+  } catch (error) {
+    console.error('获取团队成员失败:', error)
+    ElMessage.error('获取团队成员失败')
+    teamMembers.value = []
+  } finally {
+    membersLoading.value = false
+  }
+}
+
+// 解散团队
+const handleDissolveTeam = async (team: any) => {
+  try {
+    await ElMessageBox.confirm(
+      `确定要解散团队"${team.name}"吗？此操作不可恢复，所有成员将被移除。`,
+      '解散团队确认',
+      {
+        confirmButtonText: '确定解散',
+        cancelButtonText: '取消',
+        type: 'warning',
+        confirmButtonClass: 'el-button--danger'
+      }
+    )
+
+    if (!team.id) {
+      ElMessage.error('团队ID无效')
+      return
+    }
+
+    const currentUserId = authStore.user?.id
+    if (!currentUserId) {
+      ElMessage.error('用户未登录')
+      return
+    }
+
+    console.log('解散团队, ID:', team.id, '操作者:', currentUserId)
+    const response = await dissolveTeam(team.id, currentUserId)
+    console.log('解散团队响应:', response)
+
+    if (response && response.success !== false) {
+      ElMessage.success('团队已解散')
+      // 刷新团队列表
+      if (selectedCompetition.value?.id) {
+        await loadCompetitionTeams(selectedCompetition.value.id)
+      }
+    } else {
+      ElMessage.error(response?.message || '解散团队失败')
+    }
+  } catch (error: any) {
+    if (error !== 'cancel') {
+      console.error('解散团队失败:', error)
+      ElMessage.error('解散团队失败')
+    }
+  }
+}
+
+// 移除成员
+const handleRemoveMember = async (member: any) => {
+  try {
+    await ElMessageBox.confirm(
+      `确定要移除成员"${member.user?.realName || member.user?.username || '该成员'}"吗？`,
+      '移除成员确认',
+      {
+        confirmButtonText: '确定移除',
+        cancelButtonText: '取消',
+        type: 'warning',
+        confirmButtonClass: 'el-button--danger'
+      }
+    )
+
+    const currentUserId = authStore.user?.id
+    if (!currentUserId) {
+      ElMessage.error('用户未登录')
+      return
+    }
+
+    const teamId = selectedTeam.value?.id
+    if (!teamId) {
+      ElMessage.error('团队ID无效')
+      return
+    }
+
+    console.log('移除成员, 团队ID:', teamId, '成员ID:', member.id, '操作者:', currentUserId)
+    const response = await removeMember(teamId, member.id, currentUserId)
+    console.log('移除成员响应:', response)
+
+    if (response && response.success !== false) {
+      ElMessage.success('成员已移除')
+      // 重新加载成员列表
+      await loadTeamMembers(teamId)
+      // 刷新团队列表
+      if (selectedCompetition.value?.id) {
+        await loadCompetitionTeams(selectedCompetition.value.id)
+      }
+    } else {
+      ElMessage.error(response?.message || '移除成员失败')
+    }
+  } catch (error: any) {
+    if (error !== 'cancel') {
+      console.error('移除成员失败:', error)
+      ElMessage.error('移除成员失败')
+    }
+  }
+}
+
+// 格式化日期时间
+const formatDateTime = (dateTime: string | null | undefined) => {
+  if (!dateTime) return '-'
+  const date = new Date(dateTime)
+  return date.toLocaleString('zh-CN', {
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit'
+  })
 }
 
 // 删除竞赛

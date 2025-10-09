@@ -484,6 +484,16 @@ const fetchCompetitions = async () => {
     if (response && response.content) {
       competitions.value = response.content
       console.log('获取到教师竞赛列表:', competitions.value.length, competitions.value)
+
+      // 自动选择第一个竞赛并加载团队
+      if (competitions.value.length > 0 && !selectedCompetitionId.value) {
+        selectedCompetitionId.value = competitions.value[0].id || null
+        console.log('自动选择第一个竞赛:', selectedCompetitionId.value)
+        // 加载第一个竞赛的团队列表
+        if (selectedCompetitionId.value) {
+          await fetchTeams()
+        }
+      }
     } else {
       // 兼容其他可能的返回格式
       competitions.value = []
@@ -545,7 +555,23 @@ const fetchTeams = async () => {
       console.log('teamData类型:', typeof teamData)
       console.log('teamData是数组:', Array.isArray(teamData))
 
-      teams.value = Array.isArray(teamData) ? teamData : []
+      // 处理团队数据，确保每个团队都有完整的竞赛和队长信息
+      teams.value = Array.isArray(teamData) ? await Promise.all(
+        teamData.map(async (team: Team) => {
+          // 如果团队数据中缺少 competition 或 leader 的详细信息，则获取完整详情
+          if (team.id && (!team.competition?.name || !team.leader?.realName)) {
+            try {
+              const detailResponse = await getTeamDetails(team.id)
+              if (detailResponse && detailResponse.success !== false && detailResponse.data) {
+                return detailResponse.data
+              }
+            } catch (error) {
+              console.error('获取团队详情失败:', team.id, error)
+            }
+          }
+          return team
+        })
+      ) : []
 
       // 分页信息
       pagination.total = response.totalElements || response.total || teams.value.length
@@ -599,7 +625,23 @@ const fetchAllTeamsForStats = async () => {
     }
 
     if (allTeamsResponse && allTeamsResponse.success !== false) {
-      const allTeams = allTeamsResponse.data || allTeamsResponse.content || []
+      const allTeamsData = allTeamsResponse.data || allTeamsResponse.content || []
+      // 处理团队数据，确保统计数据完整
+      const allTeams = Array.isArray(allTeamsData) ? await Promise.all(
+        allTeamsData.map(async (team: Team) => {
+          if (team.id && (!team.competition?.name || !team.leader?.realName)) {
+            try {
+              const detailResponse = await getTeamDetails(team.id)
+              if (detailResponse && detailResponse.success !== false && detailResponse.data) {
+                return detailResponse.data
+              }
+            } catch (error) {
+              console.error('获取团队详情失败:', team.id, error)
+            }
+          }
+          return team
+        })
+      ) : []
       updateStatsFromAllTeams(allTeams)
     } else {
       // 如果获取失败，就用当前页数据统计
@@ -638,7 +680,31 @@ const loadTeamMembers = async (teamId: number) => {
 
     if (response && response.success !== false) {
       const memberData = response.data || []
-      teamMembers.value = Array.isArray(memberData) ? memberData : []
+
+      // 处理成员数据，确保每个成员都有完整的用户信息
+      if (Array.isArray(memberData)) {
+        teamMembers.value = memberData.map((member: TeamMember) => {
+          // 如果成员数据中的 user 对象缺少详细信息，保持原样
+          // 因为后端应该已经包含了用户信息
+          // 但为了防止显示问题，我们添加默认值
+          if (member.user) {
+            return {
+              ...member,
+              user: {
+                realName: member.user.realName || member.user.username || '未知',
+                username: member.user.username || '未知',
+                studentId: member.user.studentId || '-',
+                email: member.user.email || '-',
+                ...member.user
+              }
+            }
+          }
+          return member
+        })
+      } else {
+        teamMembers.value = []
+      }
+
       console.log('获取到团队成员:', teamMembers.value.length, teamMembers.value)
     } else {
       ElMessage.error(response?.message || '获取团队成员失败')
@@ -775,8 +841,15 @@ const handleRemoveMember = async (member: TeamMember) => {
       return
     }
 
-    console.log('移除成员, 团队ID:', member.teamId, '成员ID:', member.id, '操作者:', currentUserId)
-    const response = await removeMember(member.teamId, member.id, currentUserId)
+    // 使用 selectedTeam.value.id 而不是 member.teamId
+    const teamId = selectedTeam.value?.id
+    if (!teamId) {
+      ElMessage.error('团队ID无效')
+      return
+    }
+
+    console.log('移除成员, 团队ID:', teamId, '成员ID:', member.id, '操作者:', currentUserId)
+    const response = await removeMember(teamId, member.id, currentUserId)
     console.log('移除成员响应:', response)
 
     if (response && response.success !== false) {

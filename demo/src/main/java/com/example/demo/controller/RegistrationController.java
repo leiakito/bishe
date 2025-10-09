@@ -212,16 +212,81 @@ public class RegistrationController {
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size) {
         try {
-            Pageable pageable = PageRequest.of(page, size, Sort.by("created_at").descending());
+            Pageable pageable = PageRequest.of(page, size, Sort.by("createdAt").descending());
             Page<Registration> registrations = registrationService.getRegistrationsByCompetition(competitionId, pageable);
+
+            // 转换为包含关联数据的DTO
+            List<Map<String, Object>> registrationDTOs = new ArrayList<>();
+            for (Registration reg : registrations.getContent()) {
+                Map<String, Object> dto = new java.util.HashMap<>();
+                dto.put("id", reg.getId());
+                dto.put("status", reg.getStatus());
+                dto.put("registrationNumber", reg.getRegistrationNumber());
+                dto.put("paymentStatus", reg.getPaymentStatus());
+                dto.put("paymentAmount", reg.getPaymentAmount());
+                dto.put("paymentTime", reg.getPaymentTime());
+                dto.put("remarks", reg.getRemarks());
+                dto.put("reviewRemarks", reg.getReviewRemarks());
+                dto.put("reviewedBy", reg.getReviewedBy());
+                dto.put("reviewedAt", reg.getReviewedAt());
+                dto.put("createdAt", reg.getCreatedAt());
+                dto.put("updatedAt", reg.getUpdatedAt());
+
+                // 添加竞赛信息
+                if (reg.getCompetition() != null) {
+                    Map<String, Object> competitionInfo = new java.util.HashMap<>();
+                    competitionInfo.put("id", reg.getCompetition().getId());
+                    competitionInfo.put("name", reg.getCompetition().getName());
+                    dto.put("competition", competitionInfo);
+                }
+
+                // 添加团队信息
+                if (reg.getTeam() != null) {
+                    Map<String, Object> teamInfo = new java.util.HashMap<>();
+                    teamInfo.put("id", reg.getTeam().getId());
+                    teamInfo.put("name", reg.getTeam().getName());
+                    teamInfo.put("description", reg.getTeam().getDescription());
+                    teamInfo.put("currentMembers", reg.getTeam().getCurrentMembers());
+                    teamInfo.put("maxMembers", reg.getTeam().getMaxMembers());
+                    // 添加队长信息
+                    if (reg.getTeam().getLeader() != null) {
+                        Map<String, Object> leaderInfo = new java.util.HashMap<>();
+                        leaderInfo.put("id", reg.getTeam().getLeader().getId());
+                        leaderInfo.put("realName", reg.getTeam().getLeader().getRealName());
+                        leaderInfo.put("username", reg.getTeam().getLeader().getUsername());
+                        teamInfo.put("leader", leaderInfo);
+                    }
+                    dto.put("team", teamInfo);
+                }
+
+                // 添加提交人信息
+                if (reg.getSubmittedBy() != null) {
+                    Map<String, Object> userInfo = new java.util.HashMap<>();
+                    userInfo.put("id", reg.getSubmittedBy().getId());
+                    userInfo.put("realName", reg.getSubmittedBy().getRealName());
+                    userInfo.put("username", reg.getSubmittedBy().getUsername());
+                    userInfo.put("email", reg.getSubmittedBy().getEmail());
+                    userInfo.put("studentId", reg.getSubmittedBy().getStudentId());
+                    userInfo.put("department", reg.getSubmittedBy().getDepartment());
+                    dto.put("user", userInfo);
+                }
+
+                registrationDTOs.add(dto);
+            }
+
             return ResponseEntity.ok(Map.of(
                 "success", true,
-                "data", registrations
+                "data", registrationDTOs,
+                "totalElements", registrations.getTotalElements(),
+                "totalPages", registrations.getTotalPages(),
+                "currentPage", registrations.getNumber(),
+                "size", registrations.getSize()
             ));
         } catch (Exception e) {
+            e.printStackTrace();
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of(
                 "success", false,
-                "message", "获取报名列表失败"
+                "message", "获取报名列表失败: " + e.getMessage()
             ));
         }
     }
@@ -233,7 +298,7 @@ public class RegistrationController {
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size) {
         try {
-            Pageable pageable = PageRequest.of(page, size, Sort.by("created_at").descending());
+            Pageable pageable = PageRequest.of(page, size, Sort.by("createdAt").descending());
             Page<Registration> registrations = registrationService.getRegistrationsByTeam(teamId, pageable);
             return ResponseEntity.ok(Map.of(
                 "success", true,
@@ -256,7 +321,7 @@ public class RegistrationController {
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size) {
         try {
-            Pageable pageable = PageRequest.of(page, size, Sort.by("created_at").descending());
+            Pageable pageable = PageRequest.of(page, size, Sort.by("createdAt").descending());
             Page<Registration> registrations = registrationService.getRegistrationsByUser(userId, pageable);
             return ResponseEntity.ok(Map.of(
                 "success", true,
@@ -285,8 +350,8 @@ public class RegistrationController {
                     "message", "用户未登录"
                 ));
             }
-            
-            Pageable pageable = PageRequest.of(page, size, Sort.by("created_at").descending());
+
+            Pageable pageable = PageRequest.of(page, size, Sort.by("createdAt").descending());
             Page<Registration> registrations = registrationService.getRegistrationsByUser(currentUserId, pageable);
             return ResponseEntity.ok(Map.of(
                 "success", true,
@@ -309,7 +374,7 @@ public class RegistrationController {
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size) {
         try {
-            Pageable pageable = PageRequest.of(page, size, Sort.by("created_at").descending());
+            Pageable pageable = PageRequest.of(page, size, Sort.by("createdAt").descending());
             Page<Registration> registrations = registrationService.getRegistrationsByStatus(status, pageable);
             return ResponseEntity.ok(Map.of(
                 "success", true,
@@ -332,7 +397,7 @@ public class RegistrationController {
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size) {
         try {
-            Pageable pageable = PageRequest.of(page, size, Sort.by("created_at").descending());
+            Pageable pageable = PageRequest.of(page, size, Sort.by("createdAt").descending());
             Page<Registration> registrations = registrationService.getRegistrationsByPaymentStatus(paymentStatus, pageable);
             return ResponseEntity.ok(Map.of(
                 "success", true,
@@ -581,8 +646,8 @@ public class RegistrationController {
         try {
             LocalDateTime start = LocalDateTime.parse(startDate);
             LocalDateTime end = LocalDateTime.parse(endDate);
-            Pageable pageable = PageRequest.of(page, size, Sort.by("created_at").ascending());
-            
+            Pageable pageable = PageRequest.of(page, size, Sort.by("createdAt").ascending());
+
             List<Registration> registrations = registrationService.getRegistrationsByDateRange(start, end);
             return ResponseEntity.ok(Map.of(
                 "success", true,

@@ -607,11 +607,12 @@ export const getTeamMembers = async (id: number) => {
   try {
     const response = await request.get<any>(`/api/teams/${id}/members`)
 
-    const responseData = response.data || response
+    // 响应拦截器已经返回了完整对象 {success, data, message}
+    // 直接使用，不需要再访问 response.data
     return {
-      success: responseData.success !== false,
-      data: responseData.data || [],
-      message: responseData.message || 'success'
+      success: response.success !== false,
+      data: response.data || [],
+      message: response.message || 'success'
     }
   } catch (error) {
     console.error('获取团队成员失败:', error)

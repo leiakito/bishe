@@ -141,11 +141,29 @@ public class Team {
     }
 
     public Integer getCurrentMembers() {
+        // 如果 currentMembers 为 null 或异常值，尝试从 members 集合计算
+        if (currentMembers == null || currentMembers < 0) {
+            if (members != null) {
+                return (int) members.stream()
+                    .filter(m -> m.getStatus() == TeamMember.MemberStatus.ACTIVE)
+                    .count();
+            }
+            return 0;
+        }
         return currentMembers;
     }
 
     public void setCurrentMembers(Integer currentMembers) {
         this.currentMembers = currentMembers;
+    }
+    
+    // 同步当前成员数（从数据库重新计算）
+    public void syncCurrentMembers() {
+        if (members != null) {
+            this.currentMembers = (int) members.stream()
+                .filter(m -> m.getStatus() == TeamMember.MemberStatus.ACTIVE)
+                .count();
+        }
     }
 
     public LocalDateTime getCreatedAt() {

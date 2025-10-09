@@ -14,6 +14,10 @@ public interface TeamMemberRepository extends JpaRepository<TeamMember, Long> {
     
     // 根据团队查找成员
     List<TeamMember> findByTeamId(Long teamId);
+
+    // 根据团队查找成员（主动加载用户信息，避免懒加载异常）
+    @Query("SELECT tm FROM TeamMember tm JOIN FETCH tm.user WHERE tm.team.id = :teamId")
+    List<TeamMember> findByTeamIdWithUser(@Param("teamId") Long teamId);
     
     // 根据用户查找团队成员记录
     List<TeamMember> findByUserId(Long userId);
