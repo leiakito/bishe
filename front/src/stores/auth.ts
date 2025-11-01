@@ -156,25 +156,91 @@ export const useAuthStore = defineStore('auth', () => {
 
   // 刷新Token
   const refreshToken = async (): Promise<boolean> => {
+    if (!token.value) {
+      console.warn('没有 token，无法刷新')
+      return false
+    }
+    
     try {
+      console.log('开始刷新 token...')
       const response = await authApi.refreshToken()
       if (response.success && response.data) {
         const refreshData = response.data
         token.value = refreshData.token
         localStorage.setItem('token', refreshData.token)
+        console.log('Token 刷新成功')
         return true
       }
+      console.warn('Token 刷新失败: 响应格式不正确', response)
       return false
     } catch (error: any) {
       console.error('刷新Token失败:', error)
       
       // Token刷新失败，清除本地状态
       if (error.response?.status === 401) {
+        console.log('Token 刷新失败: 401 未授权')
         ElMessage.warning('登录已过期，请重新登录')
+        await logout()
       }
       
-      await logout()
       return false
+    }
+  }
+  
+  // 检查 token 是否即将过期
+  const isTokenExpiringSoon = (): boolean => {
+    if (!token.value) return false
+    
+    try {
+      const payload = parseJwtToken(token.value)
+      if (payload && payload.exp) {
+        const expirationTime = payload.exp * 1000
+        const currentTime = Date.now()
+        const timeUntilExpiry = expirationTime - currentTime
+        
+        // 如果在 10 分钟内过期，返回 true
+        return timeUntilExpiry > 0 && timeUntilExpiry < 10 * 60 * 1000
+      }
+    } catch (error) {
+      console.error('检查 token 过期时间失败:', error)
+    }
+    
+    return false
+  }
+  
+  // 获取 token 剩余有效时间（秒）
+  const getTokenRemainingTime = (): number => {
+    if (!token.value) return 0
+    
+    try {
+      const payload = parseJwtToken(token.value)
+      if (payload && payload.exp) {
+        const expirationTime = payload.exp * 1000
+        const currentTime = Date.now()
+        return Math.max(0, Math.floor((expirationTime - currentTime) / 1000))
+      }
+    } catch (error) {
+      console.error('获取 token 剩余时间失败:', error)
+    }
+    
+    return 0
+  }
+  
+  // 解析 JWT token
+  const parseJwtToken = (jwtToken: string): any => {
+    try {
+      const base64Url = jwtToken.split('.')[1]
+      const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/')
+      const jsonPayload = decodeURIComponent(
+        atob(base64)
+          .split('')
+          .map((c) => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2))
+          .join('')
+      )
+      return JSON.parse(jsonPayload)
+    } catch (error) {
+      console.error('解析 JWT token 失败:', error)
+      return null
     }
   }
 
@@ -327,6 +393,8 @@ export const useAuthStore = defineStore('auth', () => {
     refreshToken,
     changePassword,
     validateToken,
-    initAuth
+    initAuth,
+    isTokenExpiringSoon,
+    getTokenRemainingTime
   }
 })

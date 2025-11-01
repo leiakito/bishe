@@ -230,8 +230,23 @@ export const updateCompetition = async (id: number, data: Partial<CompetitionFor
 
 // 删除竞赛
 export const deleteCompetition = async (id: number) => {
+  // 获取当前用户ID作为deletedBy参数
+  const authStore = useAuthStore()
+  const deletedBy = authStore.user?.id
+  
+  if (!deletedBy) {
+    console.error('❌ 用户未登录或无法获取用户ID')
+    return {
+      success: false,
+      message: '用户未登录，无法删除竞赛',
+      data: null
+    }
+  }
+  
   try {
-    const response = await request.delete(`/api/competitions/${id}`)
+    // 在URL中添加deletedBy参数
+    const url = `/api/competitions/${id}?deletedBy=${deletedBy}`
+    const response = await request.delete(url)
     return wrapResponse(response)
   } catch (error) {
     console.error('删除竞赛失败:', error)

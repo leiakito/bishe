@@ -169,7 +169,8 @@ import {
   ArrowDown,
   Lock,
   SwitchButton,
-  Trophy
+  Trophy,
+  Document
 } from '@element-plus/icons-vue'
 
 const route = useRoute()
@@ -213,6 +214,12 @@ const menuItems = computed((): MenuItem[] => [
     path: '/dashboard/teams',
     title: '我的团队',
     icon: 'UserFilled',
+    roles: ['STUDENT']
+  },
+  {
+    path: '/dashboard/scores',
+    title: '成绩查询',
+    icon: 'Document',
     roles: ['STUDENT']
   },
   {

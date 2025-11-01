@@ -87,7 +87,85 @@
                 </div>
               </div>
             </div>
-    
+
+            <!-- 我的竞赛 - 新增区域 -->
+            <div class="my-competitions bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-6">
+              <div class="flex justify-between items-center mb-4">
+                <h2 class="text-lg font-semibold text-gray-800">我的竞赛</h2>
+                <el-button type="primary" size="small" @click="router.push('/dashboard/competitions')">
+                  查看全部
+                </el-button>
+              </div>
+
+              <!-- 加载状态 -->
+              <div v-if="competitionsLoading" class="text-center py-8">
+                <el-icon size="24" class="text-blue-500 animate-spin mb-2">
+                  <Loading />
+                </el-icon>
+                <p class="text-gray-500">正在加载竞赛...</p>
+              </div>
+
+              <!-- 竞赛列表 -->
+              <div v-else-if="myCompetitions.length > 0" class="space-y-4">
+                <div
+                  v-for="competition in myCompetitions"
+                  :key="competition.id"
+                  class="competition-card border border-gray-200 rounded-lg p-4 hover:border-blue-300 transition-colors"
+                >
+                  <div class="flex justify-between items-start">
+                    <div class="flex-1">
+                      <h3 class="font-semibold text-gray-900 mb-2">{{ competition.name }}</h3>
+                      <div class="flex items-center gap-2 mb-2">
+                        <el-tag :type="getCompetitionStatusType(competition.status)" size="small">
+                          {{ getCompetitionStatusLabel(competition.status) }}
+                        </el-tag>
+                        <el-tag type="info" size="small">{{ competition.category }}</el-tag>
+                        <el-tag 
+                          v-if="competition.registrationStatus" 
+                          :type="getRegistrationStatusType(competition.registrationStatus)" 
+                          size="small"
+                        >
+                          {{ getRegistrationStatusLabel(competition.registrationStatus) }}
+                        </el-tag>
+                      </div>
+                      <p class="text-sm text-gray-600">
+                        竞赛时间: {{ formatDate(competition.startTime) }} - {{ formatDate(competition.endTime) }}
+                      </p>
+                    </div>
+                    <div class="flex flex-col gap-2">
+                      <el-button
+                        v-if="canStartExam(competition)"
+                        type="warning"
+                        size="small"
+                        @click="startExam(competition.id)"
+                      >
+                        <el-icon><Edit /></el-icon>
+                        开始答题
+                      </el-button>
+                      <el-button
+                        type="primary"
+                        size="small"
+                        @click="router.push(`/dashboard/competitions/${competition.id}`)"
+                      >
+                        查看详情
+                      </el-button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- 空状态 -->
+              <div v-else class="text-center py-12">
+                <el-icon size="64" class="text-gray-300 mb-4">
+                  <Trophy />
+                </el-icon>
+                <p class="text-gray-500 mb-4">您还没有报名任何竞赛</p>
+                <el-button type="primary" @click="router.push('/dashboard/competitions')">
+                  浏览竞赛
+                </el-button>
+              </div>
+            </div>
+
             <!-- 内容区域 -->
             <div class="content-grid grid grid-cols-1 lg:grid-cols-2 gap-6">
               <!-- 最近活动 -->
@@ -162,6 +240,7 @@ import { ElMessage } from 'element-plus'
 import { request } from '@/utils/request'
 import type { ApiResponse } from '@/types'
 import { getMyTeams } from '@/api/team'
+import { getMyScores } from '@/api/score'
 import {
   User,
   UserFilled,
@@ -176,7 +255,8 @@ import {
   Expand,
   ArrowDown,
   SwitchButton,
-  Loading
+  Loading,
+  Edit
 } from '@element-plus/icons-vue'
 
 // 系统通知接口定义
@@ -230,6 +310,10 @@ const recentActivities = ref([
 const notificationLoading = ref(false)
 const systemNotices = ref<SystemNotification[]>([])
 const notificationTotal = ref(0)
+
+// 竞赛相关状态
+const competitionsLoading = ref(false)
+const myCompetitions = ref<any[]>([])
 
 // 计算属性
 const user = computed(() => authStore.user)
@@ -354,10 +438,10 @@ const formatTime = (date: Date) => {
 }
 
 // API调用函数
-const api = {
+const api = { 
   // 获取系统通知
   getNotifications: (params: any) => {
-    return request.get('/api/systeminform', params) as Promise<ApiResponse<any>>
+    return request.get('/api/systeminform', {params}) as Promise<ApiResponse<any>>
   }
 }
 
@@ -369,26 +453,29 @@ const fetchDashboardData = async () => {
     const teamsResponse = await getMyTeams({ page: 0, size: 100 })
     const myTeamsCount = teamsResponse.success ? (teamsResponse.totalElements || 0) : 0
     
-    // 设置统计数据
-    stats.value = {
-      myTeams: myTeamsCount,
-      myCompetitions: 0, // TODO: 需要实现获取用户参与竞赛的API
-      ongoingCompetitions: 0, // TODO: 需要实现获取进行中竞赛的API
-      myGrades: 0 // TODO: 需要实现获取用户成绩的API
+    // 获取用户的成绩数据
+    let myGradesCount = 0
+    try {
+      const scoresResponse = await getMyScores()
+      if (scoresResponse.success) {
+        myGradesCount = scoresResponse.total || scoresResponse.data?.length || 0
+        console.log('获取到的成绩数:', myGradesCount)
+      }
+    } catch (error) {
+      console.error('获取成绩失败:', error)
+      // 不阻塞其他数据的加载
     }
+    
+    // 仅更新已有统计字段，避免覆盖其他异步更新
+    Object.assign(stats.value, {
+      myTeams: myTeamsCount,
+      myGrades: myGradesCount
+    })
     
     console.log('仪表盘数据获取成功:', stats.value)
   } catch (error) {
     console.error('获取仪表盘数据失败:', error)
     ElMessage.error('获取仪表盘数据失败，请刷新页面重试')
-
-    // 设置默认值，避免页面空白
-    stats.value = {
-      myTeams: 0,
-      myCompetitions: 0,
-      ongoingCompetitions: 0,
-      myGrades: 0
-    }
   } finally {
     loading.value = false
   }
@@ -456,10 +543,149 @@ const formatDateTime = (dateString: string) => {
   }
 }
 
+// 加载我的竞赛
+const loadMyCompetitions = async () => {
+  competitionsLoading.value = true
+  try {
+    const response = await request.get('/api/student/competitions', {
+      page: 0,
+      size: 5,
+      onlyRegistered: true // 只获取已报名的竞赛
+    })
+
+    console.log('我的竞赛API响应:', response)
+
+    if (response && typeof response === 'object' && (response as any).success !== false) {
+      const pageData =
+        (response as any)?.data && typeof (response as any).data === 'object'
+          ? (response as any).data
+          : (response as any)?.content && Array.isArray((response as any).content)
+            ? response
+            : Array.isArray(response)
+              ? { content: response }
+              : { content: [] }
+
+      const rawContent = (pageData as any).content ?? []
+      const competitions = Array.isArray(rawContent)
+        ? rawContent
+        : (rawContent && typeof rawContent === 'object'
+            ? Object.values(rawContent)
+            : [])
+
+      console.log('解析竞赛原始数据:', rawContent)
+
+      myCompetitions.value = competitions.map((competition: any) => ({
+        ...competition,
+        // 兼容不同后端字段名
+        startTime: competition.startTime || competition.competitionStartTime,
+        endTime: competition.endTime || competition.competitionEndTime,
+        status: competition.status,
+        category: competition.category
+      }))
+
+      // 更新统计数据
+      const totalElements =
+        typeof (pageData as any).totalElements === 'number'
+          ? (pageData as any).totalElements
+          : competitions.length
+
+      Object.assign(stats.value, {
+        myCompetitions: totalElements,
+        ongoingCompetitions: myCompetitions.value.filter((competition) =>
+          ['IN_PROGRESS', 'ONGOING'].includes(competition.status)
+        ).length
+      })
+
+      console.log('解析后的竞赛数据:', {
+        competitionsCount: myCompetitions.value.length,
+        totalElements
+      })
+    }
+  } catch (error) {
+    console.error('加载竞赛失败:', error)
+  } finally {
+    competitionsLoading.value = false
+  }
+}
+
+// 判断是否可以开始答题
+const canStartExam = (competition: any): boolean => {
+  if (!competition) return false
+
+  // 竞赛状态必须是进行中或报名结束
+  const validStatuses = ['IN_PROGRESS', 'ONGOING', 'REGISTRATION_CLOSED']
+  return validStatuses.includes(competition.status)
+}
+
+// 开始答题
+const startExam = (competitionId: number) => {
+  router.push(`/dashboard/exam/${competitionId}`)
+}
+
+// 竞赛状态标签类型
+const getCompetitionStatusType = (status: string) => {
+  const map: Record<string, any> = {
+    DRAFT: 'info',
+    PUBLISHED: '',
+    REGISTRATION_OPEN: 'success',
+    REGISTRATION_CLOSED: 'warning',
+    IN_PROGRESS: 'primary',
+    ONGOING: 'primary',
+    COMPLETED: 'info',
+    CANCELLED: 'danger'
+  }
+  return map[status] || ''
+}
+
+// 竞赛状态标签文本
+const getCompetitionStatusLabel = (status: string) => {
+  const map: Record<string, string> = {
+    DRAFT: '草稿',
+    PUBLISHED: '已发布',
+    REGISTRATION_OPEN: '报名中',
+    REGISTRATION_CLOSED: '报名结束',
+    IN_PROGRESS: '进行中',
+    ONGOING: '进行中',
+    COMPLETED: '已结束',
+    CANCELLED: '已取消'
+  }
+  return map[status] || status
+}
+
+// 格式化日期
+const formatDate = (dateString: string) => {
+  if (!dateString) return '-'
+  const date = new Date(dateString)
+  return date.toLocaleDateString('zh-CN')
+}
+
+// 报名状态标签类型
+const getRegistrationStatusType = (status: string) => {
+  const map: Record<string, any> = {
+    PENDING: 'warning',
+    APPROVED: 'success',
+    REJECTED: 'danger',
+    CANCELLED: 'info'
+  }
+  return map[status] || ''
+}
+
+// 报名状态标签文本
+const getRegistrationStatusLabel = (status: string) => {
+  const map: Record<string, string> = {
+    PENDING: '待审核',
+    APPROVED: '已通过',
+    REJECTED: '已拒绝',
+    CANCELLED: '已取消'
+  }
+  return map[status] || status
+}
+
 // 初始化
 onMounted(() => {
   fetchDashboardData()
   fetchNotifications()
+  loadMyCompetitions() // 加载我的竞赛
 })
 </script>
 

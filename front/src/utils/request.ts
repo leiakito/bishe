@@ -1,10 +1,12 @@
 import axios, { type AxiosInstance, type InternalAxiosRequestConfig, type AxiosResponse } from 'axios'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import type { ApiResponse, ErrorResponse } from '@/types'
+import type { ApiResponse } from '@/types'
 import { useAuthStore } from '@/stores/auth'
 import router from '@/router'
 
-// 创建axios实例
+// ===============================
+// 🌐 创建 axios 实例
+// ===============================
 const service: AxiosInstance = axios.create({
   baseURL: import.meta.env.VITE_API_BASE_URL,
   timeout: 10000,
@@ -13,17 +15,49 @@ const service: AxiosInstance = axios.create({
   }
 })
 
-// 请求拦截器
+// ===============================
+// 🔐 请求拦截器
+// ===============================
 service.interceptors.request.use(
-  (config: InternalAxiosRequestConfig) => {
+  async (config: InternalAxiosRequestConfig) => {
     const authStore = useAuthStore()
     const token = authStore.token
-    
-    // 添加JWT token到请求头
+
+    // 添加 JWT token 到请求头
     if (token && config.headers) {
+      // 检查 token 是否即将过期（提前5分钟刷新）
+      try {
+        const tokenPayload = parseJwt(token)
+        if (tokenPayload && tokenPayload.exp) {
+          const expirationTime = tokenPayload.exp * 1000 // 转换为毫秒
+          const currentTime = Date.now()
+          const timeUntilExpiry = expirationTime - currentTime
+          
+          // 如果 token 在 5 分钟内过期，尝试刷新
+          if (timeUntilExpiry > 0 && timeUntilExpiry < 5 * 60 * 1000) {
+            console.log('Token 即将过期，尝试刷新...', {
+              剩余时间: Math.floor(timeUntilExpiry / 1000) + '秒'
+            })
+            
+            // 避免在刷新 token 的请求中再次触发刷新
+            if (!config.url?.includes('/refresh-token')) {
+              const refreshed = await authStore.refreshToken()
+              if (refreshed && authStore.token) {
+                config.headers.Authorization = `Bearer ${authStore.token}`
+                console.log('Token 刷新成功')
+              }
+            }
+          } else if (timeUntilExpiry <= 0) {
+            console.warn('Token 已过期，需要重新登录')
+          }
+        }
+      } catch (error) {
+        console.error('检查 token 过期时间失败:', error)
+      }
+      
       config.headers.Authorization = `Bearer ${token}`
     }
-    
+
     return config
   },
   (error) => {
@@ -32,46 +66,55 @@ service.interceptors.request.use(
   }
 )
 
-// 响应拦截器
+/**
+ * 解析 JWT token
+ */
+function parseJwt(token: string): any {
+  try {
+    const base64Url = token.split('.')[1]
+    const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/')
+    const jsonPayload = decodeURIComponent(
+      atob(base64)
+        .split('')
+        .map((c) => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2))
+        .join('')
+    )
+    return JSON.parse(jsonPayload)
+  } catch (error) {
+    console.error('解析 JWT token 失败:', error)
+    return null
+  }
+}
+
+// ===============================
+// 📩 响应拦截器
+// ===============================
 service.interceptors.response.use(
   (response: AxiosResponse) => {
     const { data } = response
 
-    // 如果是Blob类型（文件下载），直接返回
+    // 如果是文件下载，直接返回
     if (data instanceof Blob) {
-      console.log('API响应拦截器 - Blob响应，直接返回')
       return response
     }
 
-    // 如果不是对象类型（可能是字符串、数字等），直接返回
+    // 如果不是对象类型，直接返回
     if (typeof data !== 'object' || data === null) {
-      console.log('API响应拦截器 - 非对象响应，直接返回')
       return data
     }
 
-    // 添加调试日志
+    // 调试日志
     console.log('API响应拦截器 - 原始响应:', {
       url: response.config?.url,
       status: response.status,
-      data: data,
-      hasSuccessField: 'success' in data,
-      dataType: typeof data,
-      dataKeys: Object.keys(data),
-      dataDetail: JSON.stringify(data)
+      data
     })
 
-    // 检查是否有success字段
+    // 带 success 字段的通用结构
     if ('success' in data) {
-      // 如果响应成功
       if (data.success) {
-        console.log('API响应拦截器 - 成功响应，返回data')
-        return data  // 直接返回数据，而不是整个response
-      }
-
-      // 如果响应失败，但状态码是200，说明是业务逻辑错误
-      if (data.success === false) {
-        console.log('API响应拦截器 - 业务逻辑错误:', data.message)
-        // 对于某些特定的API（如token验证），不显示错误消息
+        return data
+      } else {
         const url = response.config?.url || ''
         if (!url.includes('/validate-token')) {
           ElMessage.error(data.message || '请求失败')
@@ -80,32 +123,57 @@ service.interceptors.response.use(
       }
     }
 
-    // 对于没有success字段的响应，直接返回原始数据
-    console.log('API响应拦截器 - 无success字段，直接返回原始数据')
     return data
   },
   (error) => {
     const { response } = error
     const authStore = useAuthStore()
-    
+
     if (response) {
       const { status, data } = response
       
+      console.error('API 响应错误:', {
+        url: response.config?.url,
+        status,
+        message: data?.message,
+        data
+      })
+      
       switch (status) {
         case 401:
-          // Token过期或无效
-          ElMessageBox.confirm(
-            '登录状态已过期，请重新登录',
-            '系统提示',
-            {
-              confirmButtonText: '重新登录',
-              cancelButtonText: '取消',
-              type: 'warning'
-            }
-          ).then(() => {
-            authStore.logout()
-            router.push('/login')
-          })
+          // 更详细的 401 错误处理
+          const errorMessage = data?.message || '登录状态已过期'
+          
+          // 避免重复弹窗
+          if (!document.querySelector('.el-message-box')) {
+            ElMessageBox.confirm(
+              errorMessage.includes('过期') 
+                ? '您的登录状态已过期，请重新登录以继续操作' 
+                : errorMessage,
+              '认证失败',
+              {
+                confirmButtonText: '重新登录',
+                cancelButtonText: '取消',
+                type: 'warning',
+                distinguishCancelAndClose: true
+              }
+            ).then(() => {
+              authStore.logout()
+              const currentPath = router.currentRoute.value.path
+              // 保存当前路径，登录后可以返回
+              if (currentPath !== '/login') {
+                router.push({
+                  path: '/login',
+                  query: { redirect: currentPath }
+                })
+              } else {
+                router.push('/login')
+              }
+            }).catch(() => {
+              // 用户点击取消，也清除登录状态
+              authStore.logout()
+            })
+          }
           break
         case 403:
           ElMessage.error('权限不足，无法访问该资源')
@@ -120,34 +188,82 @@ service.interceptors.response.use(
           ElMessage.error(data?.message || `请求失败 (${status})`)
       }
     } else {
-      // 网络错误
       ElMessage.error('网络连接失败，请检查网络设置')
     }
-    
+
     return Promise.reject(error)
   }
 )
 
-// 封装请求方法
+// ===============================
+// 🧩 封装请求方法 (增强容错)
+// ===============================
 export const request = {
+  /**
+   * GET 请求
+   */
   get<T = any>(url: string, params?: any): Promise<ApiResponse<T>> {
+    if (params && typeof params === 'object' && !Array.isArray(params)) {
+      const hasAxiosConfigKeys = [
+        'params', 'headers', 'responseType', 'timeout', 'withCredentials', 'auth'
+      ].some((key) => key in params)
+
+      if (hasAxiosConfigKeys) {
+        return service.get(url, params)
+      }
+
+      // 🚨 自动修正常见误写：request.get('/api', { page: 1 })
+      if (!('params' in params)) {
+        console.warn(`[request.get] 自动修正: 将参数包装为 { params: ... }`, params)
+        return service.get(url, { params })
+      }
+    }
+
     return service.get(url, { params })
   },
-  
-  post<T = any>(url: string, data?: any): Promise<ApiResponse<T>> {
-    return service.post(url, data)
+
+  /**
+   * POST 请求
+   */
+  post<T = any>(url: string, data?: any, config?: any): Promise<ApiResponse<T>> {
+    // 自动修正误传 config 的情况
+    if (data && typeof data === 'object' && !Array.isArray(data)) {
+      const hasAxiosConfigKeys = ['headers', 'timeout', 'responseType', 'withCredentials', 'auth']
+        .some((key) => key in data)
+
+      if (hasAxiosConfigKeys) {
+        console.warn('[request.post] 检测到配置项混入 data，请确认是否需要传 { data, config }')
+        return service.post(url, data)
+      }
+    }
+    return service.post(url, data, config)
   },
-  
-  put<T = any>(url: string, data?: any): Promise<ApiResponse<T>> {
-    return service.put(url, data)
+
+  /**
+   * PUT 请求
+   */
+  put<T = any>(url: string, data?: any, config?: any): Promise<ApiResponse<T>> {
+    return service.put(url, data, config)
   },
-  
+
+  /**
+   * DELETE 请求
+   */
   delete<T = any>(url: string, params?: any): Promise<ApiResponse<T>> {
+    if (params && typeof params === 'object' && !Array.isArray(params)) {
+      if (!('params' in params)) {
+        console.warn(`[request.delete] 自动修正: 将参数包装为 { params: ... }`, params)
+        return service.delete(url, { params })
+      }
+    }
     return service.delete(url, { params })
   },
-  
-  patch<T = any>(url: string, data?: any): Promise<ApiResponse<T>> {
-    return service.patch(url, data)
+
+  /**
+   * PATCH 请求
+   */
+  patch<T = any>(url: string, data?: any, config?: any): Promise<ApiResponse<T>> {
+    return service.patch(url, data, config)
   }
 }
 

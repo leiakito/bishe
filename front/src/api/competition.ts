@@ -17,6 +17,13 @@ const wrapResponse = <T>(data: any): ApiResponse<T> => {
   }
 }
 
+const SORT_FIELD_MAP: Record<string, string> = {
+  createTime: 'createdAt',
+  updateTime: 'updatedAt',
+  startTime: 'competitionStartTime',
+  endTime: 'competitionEndTime'
+}
+
 // 学生端API函数
 
 // 获取学生竞赛列表（使用filter接口）
@@ -29,7 +36,7 @@ export const getStudentCompetitions = async (params?: CompetitionQueryParams) =>
     
     // 分页参数 - 后端使用0-based分页
     if (params?.page !== undefined) {
-      queryParams.page = Math.max(0, (params.page || 1) - 1)
+      queryParams.page = Math.max(0, params.page)
     }
     if (params?.size !== undefined) {
       queryParams.size = params.size
@@ -50,12 +57,17 @@ export const getStudentCompetitions = async (params?: CompetitionQueryParams) =>
     }
     
     // 排序参数
-    if (params?.sortBy) {
-      queryParams.sortBy = params.sortBy
+    const rawSort = (params as any)?.sort as string | undefined
+    const rawSortBy = params?.sortBy || (rawSort ? rawSort.split(',')[0] : undefined)
+    const rawSortDir = params?.sortDir || (rawSort ? (rawSort.split(',')[1] as 'asc' | 'desc' | undefined) : undefined)
+
+    if (rawSortBy) {
+      queryParams.sortBy = SORT_FIELD_MAP[rawSortBy] || rawSortBy
+    } else {
+      queryParams.sortBy = 'createdAt'
     }
-    if (params?.sortDir) {
-      queryParams.sortDir = params.sortDir
-    }
+
+    queryParams.sortDir = rawSortDir || 'desc'
     
     // 时间范围筛选
     if (params?.startDate) {
@@ -684,6 +696,59 @@ export const registerTeamCompetition = async (teamId: number, competitionId: num
       success: false,
       message: error.response?.data?.message || '团队报名失败',
       data: null
+    }
+  }
+}
+
+// 获取竞赛列表（通用）
+export const getCompetitionsList = async (params?: { page?: number; size?: number; status?: string }) => {
+  try {
+    const queryParams: any = {
+      page: params?.page ? params.page - 1 : 0, // 转换为0-based
+      size: params?.size || 100,
+      sortBy: 'createdAt',
+      sortDir: 'desc'
+    }
+
+    if (params?.status) {
+      queryParams.status = params.status
+    }
+
+    const response = await request.get<any>('/api/competitions/filter', { params: queryParams })
+    
+    // 处理响应数据
+    let competitions: Competition[] = []
+    let responseData = response
+
+    if (response && typeof response === 'object' && 'data' in response) {
+      responseData = (response as any).data
+    }
+
+    if (Array.isArray(responseData)) {
+      competitions = responseData
+    } else if (responseData && Array.isArray(responseData.competitions)) {
+      competitions = responseData.competitions
+    } else if (responseData && Array.isArray(responseData.content)) {
+      competitions = responseData.content
+    } else if (responseData && typeof responseData === 'object' && 'data' in responseData) {
+      if (Array.isArray(responseData.data)) {
+        competitions = responseData.data
+      } else if (responseData.data && Array.isArray(responseData.data.competitions)) {
+        competitions = responseData.data.competitions
+      }
+    }
+
+    return {
+      success: true,
+      data: competitions,
+      message: 'success'
+    }
+  } catch (error: any) {
+    console.error('获取竞赛列表失败:', error)
+    return {
+      success: false,
+      message: error.message || '获取竞赛列表失败',
+      data: []
     }
   }
 }

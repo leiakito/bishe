@@ -5,6 +5,11 @@ import com.example.demo.entity.CompetitionAuditLog;
 import com.example.demo.entity.User;
 import com.example.demo.repository.CompetitionRepository;
 import com.example.demo.repository.CompetitionAuditLogRepository;
+import com.example.demo.repository.CompetitionQuestionRepository;
+import com.example.demo.repository.RegistrationRepository;
+import com.example.demo.repository.TeamRepository;
+import com.example.demo.repository.GradeRepository;
+import com.example.demo.repository.ExamPaperRepository;
 import com.example.demo.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
@@ -39,6 +44,21 @@ public class CompetitionService {
     
     @Autowired
     private CompetitionAuditLogRepository auditLogRepository;
+    
+    @Autowired
+    private CompetitionQuestionRepository competitionQuestionRepository;
+    
+    @Autowired
+    private RegistrationRepository registrationRepository;
+    
+    @Autowired
+    private TeamRepository teamRepository;
+    
+    @Autowired
+    private GradeRepository gradeRepository;
+    
+    @Autowired
+    private ExamPaperRepository examPaperRepository;
     
     // 创建竞赛
     public Competition createCompetition(Competition competition, Long creatorId) {
@@ -381,10 +401,31 @@ public class CompetitionService {
         
         // 检查是否可以删除
         if (competition.getStatus() == Competition.CompetitionStatus.IN_PROGRESS || 
+            competition.getStatus() == Competition.CompetitionStatus.ONGOING ||
             competition.getStatus() == Competition.CompetitionStatus.COMPLETED) {
             throw new RuntimeException("正在进行或已完成的竞赛不能删除");
         }
         
+        // 删除所有关联数据（按照外键依赖顺序）
+        // 1. 删除成绩记录
+        gradeRepository.deleteByCompetitionId(competitionId);
+        
+        // 2. 删除考试试卷
+        examPaperRepository.deleteByCompetitionId(competitionId);
+        
+        // 3. 删除团队（会级联删除团队成员）
+        teamRepository.deleteByCompetitionId(competitionId);
+        
+        // 4. 删除报名记录
+        registrationRepository.deleteByCompetitionId(competitionId);
+        
+        // 5. 删除竞赛题目关联
+        competitionQuestionRepository.deleteByCompetitionId(competitionId);
+        
+        // 6. 删除审核日志
+        auditLogRepository.deleteByCompetitionId(competitionId);
+        
+        // 7. 最后删除竞赛本身
         competitionRepository.deleteById(competitionId);
     }
     

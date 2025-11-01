@@ -206,9 +206,9 @@ public class TeamService {
             throw new RuntimeException("您已经是该团队成员");
         }
         
-        // 检查用户是否已经在该竞赛的其他团队中
+        // 检查用户是否已经在该竞赛的其他团队中（排除当前团队）
         Optional<Team> userTeamInCompetition = teamRepository.findUserTeamInCompetition(userId, team.getCompetition().getId());
-        if (userTeamInCompetition.isPresent()) {
+        if (userTeamInCompetition.isPresent() && !userTeamInCompetition.get().getId().equals(team.getId())) {
             throw new RuntimeException("您已经参加了该竞赛的其他团队");
         }
         
@@ -667,9 +667,9 @@ public class TeamService {
             throw new RuntimeException("您已经是该团队成员");
         }
         
-        // 检查用户是否已经在该竞赛的其他团队中
+        // 检查用户是否已经在该竞赛的其他团队中（排除当前团队）
         Optional<Team> userTeamInCompetition = teamRepository.findUserTeamInCompetition(userId, team.getCompetition().getId());
-        if (userTeamInCompetition.isPresent()) {
+        if (userTeamInCompetition.isPresent() && !userTeamInCompetition.get().getId().equals(team.getId())) {
             throw new RuntimeException("您已经参加了该竞赛的其他团队");
         }
         
@@ -788,9 +788,9 @@ public class TeamService {
             throw new RuntimeException("该用户已经是团队成员");
         }
         
-        // 检查用户是否已经在该竞赛的其他团队中
+        // 检查用户是否已经在该竞赛的其他团队中（排除当前团队）
         Optional<Team> userTeamInCompetition = teamRepository.findUserTeamInCompetition(targetUser.getId(), team.getCompetition().getId());
-        if (userTeamInCompetition.isPresent()) {
+        if (userTeamInCompetition.isPresent() && !userTeamInCompetition.get().getId().equals(team.getId())) {
             throw new RuntimeException("该用户已经参加了该竞赛的其他团队");
         }
         

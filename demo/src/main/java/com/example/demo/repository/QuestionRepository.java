@@ -14,7 +14,7 @@ import java.util.List;
  * 题目数据访问层
  */
 @Repository
-public interface QuestionRepository extends JpaRepository<Question, Long> {
+public interface QuestionRepository extends JpaRepository<Question, Long>, org.springframework.data.jpa.repository.JpaSpecificationExecutor<Question> {
     
     /**
      * 根据创建者ID查找题目

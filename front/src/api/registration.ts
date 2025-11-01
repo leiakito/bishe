@@ -1,10 +1,10 @@
-import request from '@/utils/request'
+import { request } from '@/utils/request'
 
 // 获取指定竞赛的所有报名
 export const getRegistrationsByCompetition = async (competitionId: number, page = 0, size = 100) => {
   try {
     const response = await request.get<any>(`/api/registrations/competition/${competitionId}`, {
-      params: { page, size }
+      page, size
     })
     console.log('报名API响应:', response)
 

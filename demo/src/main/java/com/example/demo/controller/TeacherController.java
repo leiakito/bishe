@@ -801,7 +801,8 @@ public class TeacherController {
             }
             
             // 检查竞赛状态是否允许删除
-            if (competition.getStatus() == Competition.CompetitionStatus.ONGOING || 
+            if (competition.getStatus() == Competition.CompetitionStatus.IN_PROGRESS ||
+                competition.getStatus() == Competition.CompetitionStatus.ONGOING || 
                 competition.getStatus() == Competition.CompetitionStatus.COMPLETED) {
                 return ResponseEntity.badRequest().body(Map.of(
                     "success", false,

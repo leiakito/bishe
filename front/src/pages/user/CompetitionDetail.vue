@@ -206,58 +206,6 @@
         </div>
       </div>
 
-      <!-- 审核信息 -->
-      <div v-if="competitionDetail && competitionDetail.auditInfo && !error" class="bg-white rounded-lg shadow-sm p-6 mb-6">
-        <h2 class="text-xl font-bold text-gray-900 mb-4 flex items-center">
-          <el-icon class="mr-2"><Document /></el-icon>
-          审核信息
-        </h2>
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          <div class="flex flex-col">
-            <span class="text-sm text-gray-500">审核状态</span>
-            <el-tag :type="getAuditStatusType(competitionDetail.auditInfo.status)" size="small" class="mt-1 w-fit">
-              {{ getAuditStatusText(competitionDetail.auditInfo.status) }}
-            </el-tag>
-          </div>
-          <div class="flex flex-col">
-            <span class="text-sm text-gray-500">审核人</span>
-            <span class="font-medium">{{ competitionDetail.auditInfo.reviewer || '待审核' }}</span>
-          </div>
-          <div class="flex flex-col">
-            <span class="text-sm text-gray-500">审核时间</span>
-            <span class="font-medium">{{ competitionDetail.auditInfo.reviewedAt ? formatDateTime(competitionDetail.auditInfo.reviewedAt) : '待审核' }}</span>
-          </div>
-          <div class="flex flex-col">
-            <span class="text-sm text-gray-500">审核备注</span>
-            <span class="font-medium">{{ competitionDetail.auditInfo.remarks || '无' }}</span>
-          </div>
-        </div>
-      </div>
-
-      <!-- 审核日志 -->
-      <div v-if="competitionDetail && competitionDetail.auditLogs && competitionDetail.auditLogs.length > 0 && !error" class="bg-white rounded-lg shadow-sm p-6 mb-6">
-        <h2 class="text-xl font-bold text-gray-900 mb-4 flex items-center">
-          <el-icon class="mr-2"><Document /></el-icon>
-          审核日志
-        </h2>
-        <el-timeline>
-          <el-timeline-item
-            v-for="(log, index) in competitionDetail.auditLogs"
-            :key="index"
-            :timestamp="formatDateTime(log.createdAt)"
-            placement="top"
-          >
-            <div class="flex items-center gap-2">
-              <el-tag :type="getAuditActionType(log.action)" size="small">
-                {{ getAuditActionText(log.action) }}
-              </el-tag>
-              <span class="text-gray-600">审核人：{{ log.reviewerName || log.reviewer?.realName || '未知' }}</span>
-            </div>
-            <p v-if="log.remarks" class="text-gray-600 mt-1">备注：{{ log.remarks }}</p>
-          </el-timeline-item>
-        </el-timeline>
-      </div>
-
     
     </div>
   </div>
@@ -334,8 +282,6 @@ const loadCompetitionDetail = async () => {
       console.log('responseData.competition:', responseData.competition)
       console.log('responseData.statistics:', responseData.statistics)
       console.log('responseData.creator:', responseData.creator)
-      console.log('responseData.auditInfo:', responseData.auditInfo)
-      console.log('responseData.auditLogs:', responseData.auditLogs)
 
       // 检查所有可能的字段
       console.log('所有字段:')
@@ -529,48 +475,6 @@ const getTeamSizeText = (minSize: number | null | undefined, maxSize: number | n
   return `${min}-${max}人`
 }
 
-// 审核状态类型
-const getAuditStatusType = (status: string) => {
-  const types: Record<string, any> = {
-    pending: 'warning',
-    approved: 'success',
-    rejected: 'danger'
-  }
-  return types[status] || 'info'
-}
-
-// 审核状态文本
-const getAuditStatusText = (status: string) => {
-  const texts: Record<string, string> = {
-    pending: '待审核',
-    approved: '已通过',
-    rejected: '已拒绝'
-  }
-  return texts[status] || '未知'
-}
-
-// 审核操作类型
-const getAuditActionType = (action: string) => {
-  const types: Record<string, any> = {
-    SUBMIT: 'info',
-    APPROVE: 'success',
-    REJECT: 'danger',
-    RETURN: 'warning'
-  }
-  return types[action] || 'info'
-}
-
-// 审核操作文本
-const getAuditActionText = (action: string) => {
-  const texts: Record<string, string> = {
-    SUBMIT: '提交审核',
-    APPROVE: '审核通过',
-    REJECT: '审核拒绝',
-    RETURN: '退回修改'
-  }
-  return texts[action] || action
-}
-
 const canRegister = (competition: any): boolean => {
   return competition.status === 'REGISTRATION_OPEN' || competition.status === 'REGISTERING'
 }
@@ -722,36 +626,6 @@ const handleRegister = () => {
   router.push('/dashboard/competitions')
   ElMessage.info('请在竞赛列表中进行报名操作')
 }
-
-// 计算属性：判断是否有真实的审核数据
-const hasValidAuditInfo = computed(() => {
-  if (!competitionDetail.value || !competitionDetail.value.auditInfo) {
-    return false
-  }
-  
-  const auditInfo = competitionDetail.value.auditInfo
-  
-  // 检查是否有有效的审核状态（不是默认值或空值）
-  const hasValidStatus = auditInfo.status && 
-    auditInfo.status !== 'pending' && 
-    auditInfo.status !== null && 
-    auditInfo.status !== undefined
-  
-  // 检查是否有真实的审核人（不是占位符）
-  const hasValidReviewer = auditInfo.reviewer && 
-    auditInfo.reviewer !== '待审核' && 
-    auditInfo.reviewer !== null && 
-    auditInfo.reviewer !== undefined &&
-    auditInfo.reviewer.trim() !== ''
-  
-  // 检查是否有有效的审核时间
-  const hasValidReviewTime = auditInfo.reviewedAt && 
-    auditInfo.reviewedAt !== null && 
-    auditInfo.reviewedAt !== undefined
-  
-  // 只有当状态、审核人、审核时间都有真实数据时，才显示审核信息
-  return hasValidStatus && hasValidReviewer && hasValidReviewTime
-})
 
 const goBack = () => {
   router.back()

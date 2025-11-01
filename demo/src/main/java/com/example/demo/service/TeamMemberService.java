@@ -67,10 +67,10 @@ public class TeamMemberService {
         }
         
         // 检查用户是否已经在同一竞赛的其他团队中
-        // 查找用户在竞赛中的团队需要调整查询逻辑
-        List<TeamMember> userTeamsInCompetition = teamMemberRepository.findByUserId(userId);
-        for (TeamMember member : userTeamsInCompetition) {
-            if (member.getStatus() == TeamMember.MemberStatus.ACTIVE) {
+        List<TeamMember> activeMemberships = teamMemberRepository.findActiveUserMembershipsInCompetition(userId, team.getCompetition().getId());
+        for (TeamMember member : activeMemberships) {
+            // 如果用户在该竞赛的其他团队中（不是当前团队）且状态为活跃，则拒绝
+            if (!member.getTeam().getId().equals(teamId)) {
                 throw new RuntimeException("用户已经在该竞赛的其他团队中");
             }
         }

@@ -84,6 +84,14 @@ public interface TeamMemberRepository extends JpaRepository<TeamMember, Long> {
     @Query("SELECT tm FROM TeamMember tm WHERE tm.user.id = :userId AND tm.team.competition.id = :competitionId")
     Optional<TeamMember> findUserMembershipInCompetition(@Param("userId") Long userId, @Param("competitionId") Long competitionId);
     
+    // 查找用户在特定竞赛中的所有团队成员记录
+    @Query("SELECT tm FROM TeamMember tm WHERE tm.user.id = :userId AND tm.team.competition.id = :competitionId")
+    List<TeamMember> findAllUserMembershipsInCompetition(@Param("userId") Long userId, @Param("competitionId") Long competitionId);
+    
+    // 查找用户在特定竞赛中的活跃团队成员记录
+    @Query("SELECT tm FROM TeamMember tm WHERE tm.user.id = :userId AND tm.team.competition.id = :competitionId AND tm.status = 'ACTIVE'")
+    List<TeamMember> findActiveUserMembershipsInCompetition(@Param("userId") Long userId, @Param("competitionId") Long competitionId);
+    
     // 统计各角色成员数量
     @Query("SELECT tm.role, COUNT(tm) FROM TeamMember tm GROUP BY tm.role")
     List<Object[]> countMembersByRole();

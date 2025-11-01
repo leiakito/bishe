@@ -27,7 +27,7 @@
             >
               <div class="flex items-center justify-between">
                 <span>{{ competition.name }}</span>
-                <el-tag :type="getCompetitionStatusType(competition.status)" size="small" class="ml-2">
+                <el-tag v-if="competition.status" :type="getCompetitionStatusType(competition.status)" size="small" class="ml-2">
                   {{ competition.status }}
                 </el-tag>
               </div>
@@ -451,9 +451,9 @@ import { useAuthStore } from '@/stores/auth'
 
 // 类型定义
 interface Competition {
-  id: number
+  id?: number
   name: string
-  status: string
+  status?: string
   category?: string
   level?: string
 }
@@ -610,9 +610,12 @@ const loadCompetitions = async () => {
 
     // 自动选择第一个竞赛
     if (competitions.value.length > 0 && !selectedCompetitionId.value) {
-      selectedCompetitionId.value = competitions.value[0].id
-      // 加载第一个竞赛的学生列表
-      await loadStudents(competitions.value[0].id)
+      const firstCompetition = competitions.value[0]
+      if (firstCompetition.id) {
+        selectedCompetitionId.value = firstCompetition.id
+        // 加载第一个竞赛的学生列表
+        await loadStudents(firstCompetition.id)
+      }
     }
   } catch (error) {
     console.error('加载竞赛列表失败:', error)

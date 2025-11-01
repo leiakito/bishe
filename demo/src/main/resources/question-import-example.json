@@ -1,0 +1,64 @@
+{
+  "questions": [
+    {
+      "title": "Java基础题 - JVM定义",
+      "content": "什么是JVM?",
+      "type": "SINGLE_CHOICE",
+      "difficulty": "EASY",
+      "category": "PROGRAMMING",
+      "options": "[\"A. Java虚拟机\", \"B. Java编译器\", \"C. Java解释器\", \"D. Java运行环境\"]",
+      "correctAnswer": "A",
+      "explanation": "JVM是Java Virtual Machine的缩写,是Java虚拟机",
+      "score": 10,
+      "tags": "Java,基础,JVM"
+    },
+    {
+      "title": "Java基础题 - 数据类型",
+      "content": "以下哪些是Java的基本数据类型?(多选)",
+      "type": "MULTIPLE_CHOICE",
+      "difficulty": "EASY",
+      "category": "PROGRAMMING",
+      "options": "[\"A. int\", \"B. float\", \"C. String\", \"D. boolean\"]",
+      "correctAnswer": "A,B,D",
+      "explanation": "Java的8种基本数据类型是byte, short, int, long, float, double, boolean, char。String是引用类型",
+      "score": 15,
+      "tags": "Java,基础,数据类型"
+    },
+    {
+      "title": "判断题 - Java是面向对象语言",
+      "content": "Java是一门纯面向对象的编程语言",
+      "type": "TRUE_FALSE",
+      "difficulty": "EASY",
+      "category": "PROGRAMMING",
+      "options": "[\"A. 正确\", \"B. 错误\"]",
+      "correctAnswer": "B",
+      "explanation": "Java不是纯面向对象语言,因为它有8种基本数据类型(不是对象)",
+      "score": 5,
+      "tags": "Java,面向对象"
+    },
+    {
+      "title": "简答题 - 解释多态",
+      "content": "请简要解释Java中的多态性,并举例说明。",
+      "type": "SHORT_ANSWER",
+      "difficulty": "MEDIUM",
+      "category": "PROGRAMMING",
+      "options": null,
+      "correctAnswer": "多态是指同一个方法调用,因为对象不同可能会有不同的行为。主要通过方法重写和接口实现来体现。",
+      "explanation": "多态的示例:父类引用指向子类对象,调用重写的方法时会执行子类的实现",
+      "score": 20,
+      "tags": "Java,多态,面向对象"
+    },
+    {
+      "title": "编程题 - 冒泡排序",
+      "content": "请用Java实现冒泡排序算法,要求对一个整数数组进行升序排序。",
+      "type": "PROGRAMMING",
+      "difficulty": "MEDIUM",
+      "category": "ALGORITHM",
+      "options": null,
+      "correctAnswer": "参考答案:使用双层循环,外层控制轮数,内层进行相邻元素比较和交换",
+      "explanation": "冒泡排序时间复杂度O(n²),空间复杂度O(1)",
+      "score": 30,
+      "tags": "Java,算法,排序"
+    }
+  ]
+}

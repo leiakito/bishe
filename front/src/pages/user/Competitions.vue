@@ -309,6 +309,17 @@
                 查看详情
               </el-button>
 
+              <!-- 开始答题按钮 - 已报名且竞赛进行中 -->
+              <el-button
+                v-if="canStartExam(competition)"
+                type="warning"
+                size="small"
+                @click="handleStartExam(competition)"
+              >
+                <el-icon><Edit /></el-icon>
+                开始答题
+              </el-button>
+
               <!-- 个人赛：直接报名 -->
               <el-button
                 v-if="isIndividualCompetition(competition)"
@@ -506,7 +517,8 @@ import {
   UserFilled,
   Money,
   Plus,
-  ArrowDown
+  ArrowDown,
+  Edit
 } from '@element-plus/icons-vue'
 
 // 路由
@@ -624,6 +636,13 @@ const SORT_OPTIONS = [
   { label: '浏览量', value: 'viewCount,desc' },
   { label: '报名人数', value: 'registrationCount,desc' }
 ]
+
+const SORT_FIELD_MAP: Record<string, string> = {
+  createTime: 'createdAt',
+  updateTime: 'updatedAt',
+  startTime: 'competitionStartTime',
+  endTime: 'competitionEndTime'
+}
 
 const PAGE_SIZE_OPTIONS = [10, 20, 50, 100]
 
@@ -769,11 +788,14 @@ const fetchCompetitions = async () => {
     }
     
     // 构建查询参数，确保与后端CompetitionController的filter接口匹配
+    const [rawSortField, rawSortDir = 'desc'] = queryParams.sort.split(',')
+    const backendSortField = SORT_FIELD_MAP[rawSortField] || rawSortField
+
     const params: any = {
-      page: pagination.current - 1, // 后端使用0-based分页
+      page: Math.max(0, pagination.current - 1), // 后端使用0-based分页
       size: queryParams.size,
-      sortBy: queryParams.sort.split(',')[0],
-      sortDir: queryParams.sort.split(',')[1] || 'desc'
+      sortBy: backendSortField,
+      sortDir: rawSortDir || 'desc'
     }
     
     // 只有非空值才添加到参数中
@@ -817,7 +839,8 @@ const fetchCompetitions = async () => {
         startTime: comp.competitionStartTime || comp.startTime,
         endTime: comp.competitionEndTime || comp.endTime,
         createTime: comp.createdAt || comp.createTime,
-        updateTime: comp.updatedAt || comp.updateTime
+        updateTime: comp.updatedAt || comp.updateTime,
+        isRegistered: false  // 默认未报名，稍后通过API检查更新
       }))
 
       // 前端过滤报名时间（因为后端API不支持）
@@ -879,8 +902,14 @@ const isValidCompetitionId = (id: any): boolean => {
 // 检查所有竞赛的报名状态
 const checkAllRegistrationStatus = async () => {
   try {
+    console.log('=== 开始检查所有竞赛的报名状态 ===')
+    console.log('待检查的竞赛数量:', competitions.value.length)
+    console.log('竞赛ID列表:', competitions.value.map(c => c.id))
+
     // 并发检查所有竞赛的报名状态
-    const checkPromises = competitions.value.map(async (competition) => {
+    const checkPromises = competitions.value.map(async (competition, index) => {
+      console.log(`\n[${index + 1}/${competitions.value.length}] 检查竞赛 ${competition.id}: ${competition.name}`)
+
       // 更严格的竞赛ID验证
       if (!isValidCompetitionId(competition.id)) {
         console.warn(`跳过无效的竞赛ID: ${competition.id}`, competition)
@@ -895,49 +924,44 @@ const checkAllRegistrationStatus = async () => {
       }
 
       try {
-        console.log(`检查竞赛报名状态 - ID: ${competition.id}, 名称: ${competition.name}`)
+        console.log(`→ 调用API检查竞赛 ${competition.id} 的报名状态...`)
         const checkResult = await checkUserRegistration(competition.id)
-        console.log(`竞赛 ${competition.id} API返回结果:`, checkResult)
-        console.log(`竞赛 ${competition.id} API返回数据类型:`, typeof checkResult.data, checkResult.data)
-        
-        // 检查返回的数据中是否包含当前竞赛的报名记录
+        console.log(`→ 竞赛 ${competition.id} API返回:`, checkResult)
+
+        // 检查返回的数据
         let isRegistered = false
         if (checkResult.success && checkResult.data) {
-          // 获取实际的数据，可能需要访问 checkResult.data.data
+          // 获取实际的数据
           const actualData = (checkResult.data as any)?.data || checkResult.data
-          console.log(`竞赛 ${competition.id} 实际数据:`, actualData, `数据类型:`, typeof actualData)
+          console.log(`→ 竞赛 ${competition.id} 实际数据:`, actualData)
 
+          // 后端API已经按competitionId过滤，所以数组不为空就表示已报名
           if (Array.isArray(actualData)) {
-            // 如果是数组，检查数组中是否有匹配当前竞赛ID的记录
-            // 后端已修改,现在会返回包含 competitionId 字段的DTO
-            isRegistered = actualData.some((registration: any) => {
-              const regCompetitionId = registration.competitionId
-              console.log(`检查报名记录:`, registration, `竞赛ID匹配: ${regCompetitionId} === ${competition.id}`)
-              return regCompetitionId === competition.id
-            })
-            // 如果数组不为空,也表示已报名
-            if (!isRegistered && actualData.length > 0) {
-              isRegistered = true
+            console.log(`→ 数据是数组，长度: ${actualData.length}`)
+            isRegistered = actualData.length > 0
+            if (isRegistered) {
+              console.log(`  ✓ 找到 ${actualData.length} 条报名记录`)
             }
-          } else if (typeof actualData === 'object' && actualData !== null) {
-            // 如果是对象，可能直接包含报名信息
-            console.log(`检查对象类型的报名数据:`, actualData)
-            const regCompetitionId = actualData.competitionId
-            isRegistered = regCompetitionId === competition.id
-            console.log(`对象报名记录竞赛ID匹配: ${regCompetitionId} === ${competition.id}, 结果: ${isRegistered}`)
+          } else if (actualData && typeof actualData === 'object') {
+            // 如果是对象（单条记录），也表示已报名
+            console.log(`→ 数据是对象，已报名`)
+            isRegistered = true
           }
+        } else {
+          console.log(`→ 竞赛 ${competition.id} API返回失败或无数据`)
         }
 
         competition.isRegistered = Boolean(isRegistered)
-        console.log(`竞赛 ${competition.id} 最终报名状态: ${competition.isRegistered}`)
+        console.log(`✓ 竞赛 ${competition.id} 最终报名状态: ${competition.isRegistered}`)
       } catch (error) {
-        console.error(`检查竞赛${competition.id}报名状态失败:`, error)
+        console.error(`✗ 检查竞赛 ${competition.id} 报名状态失败:`, error)
         competition.isRegistered = false
       }
     })
 
     await Promise.all(checkPromises)
-    console.log('所有竞赛报名状态检查完成')
+    console.log('\n=== 所有竞赛报名状态检查完成 ===')
+    console.log('报名状态汇总:', competitions.value.map(c => ({ id: c.id, name: c.name, isRegistered: c.isRegistered })))
   } catch (error) {
     console.error('批量检查报名状态失败:', error)
   }
@@ -979,6 +1003,41 @@ const handleView = (competition: Competition) => {
   console.log('查看竞赛:', competition)
   // 跳转到竞赛详情页面
   router.push(`/dashboard/competitions/${competition.id}`)
+}
+
+// 判断是否可以开始答题
+const canStartExam = (competition: Competition): boolean => {
+  console.log('检查是否可以开始答题:', {
+    id: competition.id,
+    name: competition.name,
+    isRegistered: competition.isRegistered,
+    status: competition.status
+  })
+
+  // 1. 必须已报名
+  if (!competition.isRegistered) {
+    console.log(`竞赛 ${competition.id} 未报名，不显示开始答题按钮`)
+    return false
+  }
+
+  // 2. 竞赛状态必须是进行中或报名已结束
+  const validStatuses = ['IN_PROGRESS', 'ONGOING', 'REGISTRATION_CLOSED']
+  const canStart = validStatuses.includes(competition.status)
+
+  console.log(`竞赛 ${competition.id} 状态检查:`, {
+    status: competition.status,
+    validStatuses,
+    canStart
+  })
+
+  return canStart
+}
+
+// 开始答题
+const handleStartExam = (competition: Competition) => {
+  console.log('开始答题:', competition)
+  // 跳转到答题页面
+  router.push(`/dashboard/exam/${competition.id}`)
 }
 
 // 个人报名

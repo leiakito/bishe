@@ -348,6 +348,35 @@ public class GradeService {
         return savedGrades;
     }
     
+    /**
+     * 计算并持久化竞赛排名
+     * 支持并列分数同名次，后续名次跳跃（示例：1,2,2,4）
+     */
+    public void computeAndPersistRanking(Long competitionId) {
+        // 获取该竞赛所有成绩，按分数降序排列
+        List<Grade> grades = gradeRepository.findCompetitionRankingList(competitionId);
+        
+        int position = 0;  // 位置计数器
+        int currentRank = 0;  // 当前排名
+        BigDecimal prevScore = null;  // 上一个成绩
+        
+        for (Grade grade : grades) {
+            position++;  // 位置递增
+            
+            // 如果分数与上一个不同，更新排名为当前位置
+            if (prevScore == null || grade.getScore().compareTo(prevScore) != 0) {
+                currentRank = position;
+                prevScore = grade.getScore();
+            }
+            // 如果分数相同，保持相同排名
+            
+            grade.setRanking(currentRank);
+        }
+        
+        // 批量保存排名
+        gradeRepository.saveAll(grades);
+    }
+    
     // 获取竞赛成绩统计
     public List<Object[]> getGradeStatsByCompetition(Long competitionId) {
         Optional<Competition> competitionOpt = competitionRepository.findById(competitionId);

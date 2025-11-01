@@ -42,4 +42,7 @@ public interface CompetitionAuditLogRepository extends JpaRepository<Competition
     // 统计某个审核员的审核次数
     @Query("SELECT COUNT(cal) FROM CompetitionAuditLog cal WHERE cal.reviewer.id = :reviewerId")
     Long countByReviewerId(@Param("reviewerId") Long reviewerId);
+    
+    // 删除竞赛的所有审核日志
+    void deleteByCompetitionId(Long competitionId);
 }

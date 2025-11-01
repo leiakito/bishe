@@ -97,6 +97,16 @@ const routes: RouteRecordRaw[] = [
         }
       },
       {
+        path: 'exam/:id',
+        name: 'ExamPage',
+        component: () => import('@/pages/student/ExamPage.vue'),
+        meta: {
+          title: '竞赛答题',
+          requiresAuth: true,
+          hideInMenu: true
+        }
+      },
+      {
         path: 'teams',
         name: 'UserTeams',
         component: () => import('@/pages/user/Teams.vue'),
@@ -114,6 +124,16 @@ const routes: RouteRecordRaw[] = [
           title: '团队详情',
           requiresAuth: true,
           hideInMenu: true
+        }
+      },
+      {
+        path: 'scores',
+        name: 'UserScores',
+        component: () => import('@/pages/user/Scores.vue'),
+        meta: {
+          title: '成绩查询',
+          icon: 'Document',
+          requiresAuth: true
         }
       },
       {
@@ -173,6 +193,24 @@ const routes: RouteRecordRaw[] = [
         path: 'profile',
         name: 'TeacherProfile',
         component: () => import('@/pages/teacher/Profile.vue'),
+        meta: { requiresAuth: true, roles: ['TEACHER'] },
+      },
+      {
+        path: 'question-bank',
+        name: 'QuestionBank',
+        component: () => import('@/pages/teacher/QuestionBank.vue'),
+        meta: { requiresAuth: true, roles: ['TEACHER'] },
+      },
+      {
+        path: 'competitions/:id/questions',
+        name: 'CompetitionQuestions',
+        component: () => import('@/pages/teacher/CompetitionQuestions.vue'),
+        meta: { requiresAuth: true, roles: ['TEACHER'], hideInMenu: true },
+      },
+      {
+        path: 'score-management',
+        name: 'ScoreManagement',
+        component: () => import('@/pages/teacher/ScoreManagement.vue'),
         meta: { requiresAuth: true, roles: ['TEACHER'] },
       },
     ],

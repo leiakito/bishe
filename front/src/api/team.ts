@@ -161,7 +161,7 @@ export const getTeamsByCompetition = async (
     const response = await request.get<any>(`/api/teams/competition/${competitionId}`, {
       page: params?.page || 0,
       size: params?.size || 10
-    })
+    }) as any
 
     console.log('getTeamsByCompetition API响应:', response)
 
@@ -195,7 +195,7 @@ export const getTeamsByStatus = async (
     const response = await request.get<any>(`/api/teams/status/${status}`, {
       page: params?.page || 0,
       size: params?.size || 10
-    })
+    }) as any
 
     // 响应拦截器已经返回了完整对象，直接使用
     return {
@@ -226,7 +226,7 @@ export const searchTeams = async (
       keyword,
       page: params?.page || 0,
       size: params?.size || 10
-    })
+    }) as any
 
     // 响应拦截器已经返回了完整对象，直接使用
     return {
@@ -275,16 +275,41 @@ export const getTeamsCreatedByUser = async (
   }
 }
 
-// 获取当前用户参与的团队
+// // 获取当前用户参与的团队
+// export const getMyTeams = async (params?: { page?: number; size?: number }) => {
+//   try {
+//     const response = await request.get<any>('/api/teams/joined-by/me', {
+//       page: params?.page || 0,
+//       size: params?.size || 10
+//     })
+
+//     // 响应拦截器已经返回了完整的响应对象 {success, data, totalElements, totalPages}
+//     // 所以直接使用 response 即可
+//     const responseData = response as any
+//     return {
+//       success: responseData.success !== false,
+//       data: responseData.data || [],
+//       totalElements: responseData.totalElements || 0,
+//       totalPages: responseData.totalPages || 0
+//     }
+//   } catch (error) {
+//     console.error('获取我的团队失败:', error)
+//     return {
+//       success: false,
+//       message: '获取我的团队失败',
+//       data: []
+//     }
+//   }
+// }
 export const getMyTeams = async (params?: { page?: number; size?: number }) => {
   try {
     const response = await request.get<any>('/api/teams/joined-by/me', {
-      page: params?.page || 0,
-      size: params?.size || 10
+      params: {
+        page: params?.page || 0,
+        size: params?.size || 10
+      }
     })
 
-    // 响应拦截器已经返回了完整的响应对象 {success, data, totalElements, totalPages}
-    // 所以直接使用 response 即可
     const responseData = response as any
     return {
       success: responseData.success !== false,
@@ -301,7 +326,6 @@ export const getMyTeams = async (params?: { page?: number; size?: number }) => {
     }
   }
 }
-
 // 获取用户参与的团队
 export const getTeamsJoinedByUser = async (
   userId: number,

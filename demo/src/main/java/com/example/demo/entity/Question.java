@@ -134,6 +134,26 @@ public class Question {
         DATABASE("数据库"),
         NETWORK("网络"),
         SOFTWARE_ENGINEERING("软件工程"),
+        OPERATING_SYSTEM("操作系统"),
+        COMPUTER_ARCHITECTURE("计算机组成原理"),
+        COMPILER_PRINCIPLE("编译原理"),
+        ARTIFICIAL_INTELLIGENCE("人工智能"),
+        MACHINE_LEARNING("机器学习"),
+        WEB_DEVELOPMENT("Web开发"),
+        MOBILE_DEVELOPMENT("移动开发"),
+        CLOUD_COMPUTING("云计算"),
+        CYBERSECURITY("网络安全"),
+        // 编程语言分类
+        PYTHON("Python编程"),
+        JAVA("Java编程"),
+        JAVASCRIPT("JavaScript编程"),
+        CPP("C++编程"),
+        C("C语言编程"),
+        CSHARP("C#编程"),
+        GO("Go语言编程"),
+        RUST("Rust编程"),
+        PHP("PHP编程"),
+        RUBY("Ruby编程"),
         OTHER("其他");
         
         private final String displayName;

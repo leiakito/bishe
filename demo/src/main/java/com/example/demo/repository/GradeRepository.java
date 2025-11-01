@@ -132,4 +132,7 @@ public interface GradeRepository extends JpaRepository<Grade, Long> {
     // 查找需要排名的成绩（分数不为空但排名为空）
     @Query("SELECT g FROM Grade g WHERE g.competition.id = :competitionId AND g.score IS NOT NULL AND g.ranking IS NULL")
     List<Grade> findGradesNeedingRanking(@Param("competitionId") Long competitionId);
+    
+    // 删除竞赛的所有成绩记录
+    void deleteByCompetitionId(Long competitionId);
 }

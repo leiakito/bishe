@@ -6,7 +6,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
@@ -22,6 +21,8 @@ import java.util.Map;
 
 @Component
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
+    
+    private static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(JwtAuthenticationFilter.class);
     
     @Autowired
     private JwtUtil jwtUtil;
@@ -82,6 +83,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         String authorizationHeader = request.getHeader("Authorization");
         
         if (authorizationHeader == null || !authorizationHeader.startsWith("Bearer ")) {
+            logger.warn("JWT认证失败 - 缺少认证令牌: path={}, method={}", requestPath, method);
             sendErrorResponse(response, HttpServletResponse.SC_UNAUTHORIZED, "缺少认证令牌");
             return;
         }
@@ -93,7 +95,20 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             boolean isValid = jwtUtil.isTokenValid(token);
             
             if (!isValid) {
-                sendErrorResponse(response, HttpServletResponse.SC_UNAUTHORIZED, "认证令牌无效或已过期");
+                // 检查token是否过期
+                Long remainingTime = jwtUtil.getTokenRemainingTime(token);
+                if (remainingTime <= 0) {
+                    logger.warn("JWT认证失败 - Token已过期: path={}, username={}, expiredTime={}ms", 
+                        requestPath, 
+                        safeGetUsername(token),
+                        Math.abs(remainingTime));
+                    sendErrorResponse(response, HttpServletResponse.SC_UNAUTHORIZED, "认证令牌已过期，请重新登录");
+                } else {
+                    logger.warn("JWT认证失败 - Token无效: path={}, username={}", 
+                        requestPath, 
+                        safeGetUsername(token));
+                    sendErrorResponse(response, HttpServletResponse.SC_UNAUTHORIZED, "认证令牌无效");
+                }
                 return;
             }
             
@@ -101,6 +116,9 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             String username = jwtUtil.getUsernameFromToken(token);
             Long userId = jwtUtil.getUserIdFromToken(token);
             String role = jwtUtil.getRoleFromToken(token);
+            
+            logger.debug("JWT认证成功: path={}, username={}, userId={}, role={}", 
+                requestPath, username, userId, role);
             
             if (username != null && SecurityContextHolder.getContext().getAuthentication() == null) {
                 // 创建认证对象
@@ -122,7 +140,21 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 SecurityContextHolder.getContext().setAuthentication(authToken);
             }
             
+        } catch (io.jsonwebtoken.ExpiredJwtException e) {
+            logger.warn("JWT认证失败 - Token已过期(ExpiredJwtException): path={}, username={}, expiredAt={}", 
+                requestPath, e.getClaims().getSubject(), e.getClaims().getExpiration());
+            sendErrorResponse(response, HttpServletResponse.SC_UNAUTHORIZED, "认证令牌已过期，请重新登录");
+            return;
+        } catch (io.jsonwebtoken.MalformedJwtException e) {
+            logger.warn("JWT认证失败 - Token格式错误: path={}, error={}", requestPath, e.getMessage());
+            sendErrorResponse(response, HttpServletResponse.SC_UNAUTHORIZED, "认证令牌格式错误");
+            return;
+        } catch (io.jsonwebtoken.security.SignatureException e) {
+            logger.warn("JWT认证失败 - Token签名无效: path={}, error={}", requestPath, e.getMessage());
+            sendErrorResponse(response, HttpServletResponse.SC_UNAUTHORIZED, "认证令牌签名无效");
+            return;
         } catch (Exception e) {
+            logger.error("JWT认证失败 - 未知错误: path={}, error={}", requestPath, e.getMessage(), e);
             sendErrorResponse(response, HttpServletResponse.SC_UNAUTHORIZED, "认证令牌解析失败");
             return;
         }
@@ -132,6 +164,17 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     
     private boolean isExcludedPath(String requestPath) {
         return excludedPaths.stream().anyMatch(requestPath::startsWith);
+    }
+    
+    /**
+     * 安全地获取token中的用户名（不抛出异常）
+     */
+    private String safeGetUsername(String token) {
+        try {
+            return jwtUtil.getUsernameFromToken(token);
+        } catch (Exception e) {
+            return "unknown";
+        }
     }
     
     private void sendErrorResponse(HttpServletResponse response, int status, String message) throws IOException {

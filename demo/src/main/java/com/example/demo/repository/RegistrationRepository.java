@@ -26,7 +26,10 @@ public interface RegistrationRepository extends JpaRepository<Registration, Long
     
     // 根据提交用户查找报名
     List<Registration> findBySubmittedById(Long userId);
-    
+
+    // 根据用户和状态查找报名
+    List<Registration> findBySubmittedByIdAndStatus(Long userId, Registration.RegistrationStatus status);
+
     // 根据状态查找报名
     List<Registration> findByStatus(Registration.RegistrationStatus status);
     
@@ -128,4 +131,7 @@ public interface RegistrationRepository extends JpaRepository<Registration, Long
     // 统计竞赛实体特定状态的报名数量
     @Query("SELECT COUNT(r) FROM Registration r WHERE r.competition = :competition AND r.status = :status")
     Long countByCompetitionAndStatus(@Param("competition") com.example.demo.entity.Competition competition, @Param("status") Registration.RegistrationStatus status);
+    
+    // 删除竞赛的所有报名记录
+    void deleteByCompetitionId(Long competitionId);
 }

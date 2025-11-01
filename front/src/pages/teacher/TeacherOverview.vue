@@ -88,7 +88,17 @@
       <!-- 最近竞赛 -->
       <div class="recent-activities bg-white rounded-lg shadow-sm border border-gray-200 p-6">
         <h2 class="text-lg font-semibold text-gray-800 mb-4">最近竞赛</h2>
-        <div class="space-y-4">
+        
+        <!-- 加载状态 -->
+        <div v-if="competitionsLoading" class="text-center py-8">
+          <el-icon size="24" class="text-blue-500 animate-spin mb-2">
+            <Setting />
+          </el-icon>
+          <p class="text-gray-500">正在加载竞赛...</p>
+        </div>
+        
+        <!-- 竞赛列表 -->
+        <div v-else class="space-y-4">
           <div v-for="competition in recentCompetitions" :key="competition.id"
                class="competition-item flex items-center justify-between p-4 bg-gray-50 rounded-lg">
             <div class="flex items-center space-x-3">
@@ -256,22 +266,9 @@ const systemNotices = ref<SystemNotice[]>([])
 const noticesLoading = ref<boolean>(false)
 
 const recentCompetitions = ref<Competition[]>([])
+const competitionsLoading = ref(false)
 
 const studentActivities = ref<StudentActivity[]>([])
-
-// 竞赛名称池
-const competitionNames = [
-  '全国大学生数学建模竞赛',
-  'ACM程序设计竞赛',
-  '创新创业大赛',
-  '互联网+大学生创新创业大赛',
-  '全国大学生电子设计竞赛',
-  '挑战杯全国大学生课外学术科技作品竞赛',
-  '中国大学生计算机设计大赛',
-  '蓝桥杯全国软件和信息技术专业人才大赛',
-  '全国大学生机器人大赛',
-  '全国大学生智能汽车竞赛'
-]
 
 // 学生姓名池
 const studentNames = [
@@ -296,17 +293,6 @@ const studentActions = [
   '发布了团队公告'
 ]
 
-// 状态池
-const statuses = ['进行中', '已结束', '报名中']
-
-// 生成随机日期（最近30天内）
-const generateRandomDate = () => {
-  const today = new Date()
-  const daysAgo = Math.floor(Math.random() * 30)
-  const date = new Date(today.getTime() - daysAgo * 24 * 60 * 60 * 1000)
-  return date.toISOString().split('T')[0]
-}
-
 // 生成随机时间描述
 const generateRandomTime = () => {
   const random = Math.random()
@@ -322,37 +308,66 @@ const generateRandomTime = () => {
   }
 }
 
-// 随机打乱数组
-const shuffleArray = <T,>(array: T[]): T[] => {
-  const newArray = [...array]
-  for (let i = newArray.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [newArray[i], newArray[j]] = [newArray[j], newArray[i]]
+// 加载最近竞赛数据
+const loadRecentCompetitions = async () => {
+  try {
+    competitionsLoading.value = true
+    const response = await getTeacherCompetitions({ 
+      page: 1, 
+      size: 5,
+      sortBy: 'createdAt',
+      sortDir: 'desc'
+    })
+    
+    if (response.content && Array.isArray(response.content)) {
+      recentCompetitions.value = response.content.map((comp: any) => {
+        // 格式化日期
+        let dateStr = '未知日期'
+        if (comp.startTime) {
+          const date = new Date(comp.startTime)
+          dateStr = date.toISOString().split('T')[0]
+        } else if (comp.createdAt) {
+          const date = new Date(comp.createdAt)
+          dateStr = date.toISOString().split('T')[0]
+        }
+        
+        // 确定竞赛状态
+        let status = '未知'
+        if (comp.status === 'ONGOING' || comp.status === '进行中') {
+          status = '进行中'
+        } else if (comp.status === 'COMPLETED' || comp.status === '已结束') {
+          status = '已结束'
+        } else if (comp.status === 'UPCOMING' || comp.status === 'REGISTRATION' || comp.status === '报名中') {
+          status = '报名中'
+        } else {
+          status = comp.status || '未知'
+        }
+        
+        return {
+          id: comp.id,
+          name: comp.name || '未命名竞赛',
+          date: dateStr,
+          status: status
+        }
+      })
+    } else {
+      recentCompetitions.value = []
+    }
+    
+    console.log('最近竞赛加载完成:', recentCompetitions.value)
+  } catch (error) {
+    console.error('加载最近竞赛失败:', error)
+    recentCompetitions.value = []
+  } finally {
+    competitionsLoading.value = false
   }
-  return newArray
 }
 
-// 生成随机竞赛数据
-const generateRandomCompetitions = () => {
-  const shuffledNames = shuffleArray(competitionNames)
-  const count = Math.floor(Math.random() * 3) + 3 // 3-5个竞赛
-
-  recentCompetitions.value = shuffledNames.slice(0, count).map((name, index) => ({
-    id: index + 1,
-    name,
-    date: generateRandomDate(),
-    status: statuses[Math.floor(Math.random() * statuses.length)]
-  }))
-
-  // 按日期排序（最新的在前面）
-  recentCompetitions.value.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
-}
-
-// 生成随机学生动态数据
+// 生成随机学生动态数据（暂时使用模拟数据，后续可接入真实API）
 const generateRandomActivities = () => {
-  const shuffledStudents = shuffleArray(studentNames)
-  const shuffledActions = shuffleArray(studentActions)
   const count = Math.floor(Math.random() * 3) + 4 // 4-6个动态
+  const shuffledStudents = [...studentNames].sort(() => Math.random() - 0.5)
+  const shuffledActions = [...studentActions].sort(() => Math.random() - 0.5)
 
   studentActivities.value = Array.from({ length: count }, (_, index) => ({
     id: index + 1,
@@ -487,24 +502,23 @@ const loadStats = async () => {
     stats.value.competitions = competitionsResponse.totalElements || 0
     stats.value.teams = teamsResponse.totalElements || 0
 
-    // 如果没有真实的学生数据API，使用模拟数据
-    // 可以根据团队数量估算学生数量（假设平均每个团队3-5人）
-    stats.value.students = stats.value.teams > 0 ? stats.value.teams * 4 : 0
+    // 根据团队数量估算学生数量（假设平均每个团队3-4人）
+    stats.value.students = stats.value.teams > 0 ? Math.floor(stats.value.teams * 3.5) : 0
     stats.value.activeStudents = Math.floor(stats.value.students * 0.85) // 假设85%的学生是活跃的
 
-    // 待处理任务数量 - 可以从竞赛状态为"报名中"的数量估算
-    stats.value.pendingTasks = 0
+    // 待处理任务数量 - 可以通过获取进行中的竞赛数量来估算
+    stats.value.pendingTasks = stats.value.competitions > 0 ? Math.max(Math.floor(stats.value.competitions * 0.3), 0) : 0
 
     console.log('统计数据加载完成:', stats.value)
   } catch (error) {
     console.error('加载统计数据失败:', error)
-    // 如果API调用失败，使用模拟数据
+    // 如果API调用失败，设置为0
     stats.value = {
-      competitions: 8,
-      students: 45,
-      teams: 12,
-      activeStudents: 38,
-      pendingTasks: 3
+      competitions: 0,
+      students: 0,
+      teams: 0,
+      activeStudents: 0,
+      pendingTasks: 0
     }
   } finally {
     statsLoading.value = false
@@ -515,7 +529,7 @@ const loadStats = async () => {
 onMounted(() => {
   loadSystemNotices()
   loadStats()
-  generateRandomCompetitions()
+  loadRecentCompetitions()
   generateRandomActivities()
 })
 </script>

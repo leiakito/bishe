@@ -65,9 +65,13 @@ public interface TeamRepository extends JpaRepository<Team, Long> {
     @Query("SELECT t FROM Team t WHERE t.id IN (SELECT tm.team.id FROM TeamMember tm WHERE tm.user.id = :userId)")
     List<Team> findTeamsByUser(@Param("userId") Long userId);
     
-    // 查找用户在特定竞赛中的团队
-    @Query("SELECT t FROM Team t WHERE t.competition.id = :competitionId AND t.id IN (SELECT tm.team.id FROM TeamMember tm WHERE tm.user.id = :userId)")
+    // 查找用户在特定竞赛中的团队（只查找活跃成员）
+    @Query("SELECT t FROM Team t WHERE t.competition.id = :competitionId AND t.id IN (SELECT tm.team.id FROM TeamMember tm WHERE tm.user.id = :userId AND tm.status = 'ACTIVE')")
     Optional<Team> findUserTeamInCompetition(@Param("userId") Long userId, @Param("competitionId") Long competitionId);
+    
+    // 查找用户在特定竞赛中的所有团队（只查找活跃成员）
+    @Query("SELECT t FROM Team t WHERE t.competition.id = :competitionId AND t.id IN (SELECT tm.team.id FROM TeamMember tm WHERE tm.user.id = :userId AND tm.status = 'ACTIVE')")
+    List<Team> findAllUserTeamsInCompetition(@Param("userId") Long userId, @Param("competitionId") Long competitionId);
     
     // 查找团队成员数量
     @Query("SELECT t, COUNT(tm) FROM Team t LEFT JOIN t.members tm WHERE t.id = :teamId GROUP BY t")
@@ -160,4 +164,7 @@ public interface TeamRepository extends JpaRepository<Team, Long> {
            "WHERE r.competition_id = :competitionId",
            nativeQuery = true)
     Page<Team> findRegisteredTeamsByCompetition(@Param("competitionId") Long competitionId, Pageable pageable);
+    
+    // 删除竞赛的所有团队
+    void deleteByCompetitionId(Long competitionId);
 }
