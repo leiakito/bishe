@@ -3,7 +3,7 @@
     <!-- 页面标题 -->
     <div class="page-header mb-6">
       <h1 class="text-2xl font-bold text-gray-800 mb-2">管理员仪表盘</h1>
-      <p class="text-gray-600">欢迎使用竞赛管理系统管理后台</p>
+      <p class="text-gray-600">欢迎使用北城竞赛管理系统管理后台</p>
     </div>
 
     <!-- 加载状态 -->

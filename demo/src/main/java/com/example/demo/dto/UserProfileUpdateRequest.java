@@ -25,6 +25,12 @@ public class UserProfileUpdateRequest {
     @Size(max = 50, message = "职称不能超过50个字符")
     private String title;
 
+    @Size(max = 255, message = "头像地址过长")
+    private String avatar;
+
+    @Size(max = 255, message = "附件地址过长")
+    private String attachmentUrl;
+
     // 构造函数
     public UserProfileUpdateRequest() {}
     
@@ -75,5 +81,21 @@ public class UserProfileUpdateRequest {
 
     public void setTitle(String title) {
         this.title = title;
+    }
+
+    public String getAvatar() {
+        return avatar;
+    }
+
+    public void setAvatar(String avatar) {
+        this.avatar = avatar;
+    }
+
+    public String getAttachmentUrl() {
+        return attachmentUrl;
+    }
+
+    public void setAttachmentUrl(String attachmentUrl) {
+        this.attachmentUrl = attachmentUrl;
     }
 }

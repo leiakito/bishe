@@ -56,12 +56,19 @@
 
           <div class="form-row">
             <el-form-item label="学校名称" prop="schoolName" class="form-item-half">
-              <el-input
+              <el-select
                 v-model="registerForm.schoolName"
-                placeholder="请输入学校名称（可选）"
-                :prefix-icon="School"
+                placeholder="请选择学校校区"
+                filterable
                 clearable
-              />
+              >
+                <el-option
+                  v-for="school in schoolOptions"
+                  :key="school"
+                  :label="school"
+                  :value="school"
+                />
+              </el-select>
             </el-form-item>
             <el-form-item label="所属院系" prop="department" class="form-item-half">
               <el-input
@@ -138,7 +145,6 @@ import {
   Lock,
   Message,
   Phone,
-  School,
   OfficeBuilding,
   Postcard
 } from '@element-plus/icons-vue'
@@ -148,6 +154,10 @@ const router = useRouter()
 const authStore = useAuthStore()
 const registerFormRef = ref()
 const isLoading = ref(false)
+const schoolOptions = [
+  '北京城市学院航天城校区',
+  '北京城市学院顺义校区'
+]
 
 // 表单数据
 const registerForm = reactive({
@@ -161,6 +171,16 @@ const registerForm = reactive({
   confirmPassword: '',
   role: 'TEACHER'
 })
+
+const validateSchoolName = (rule, value, callback) => {
+  if (!value) {
+    callback(new Error('请选择学校校区'))
+  } else if (!schoolOptions.includes(value)) {
+    callback(new Error('学校校区只能从列表中选择'))
+  } else {
+    callback()
+  }
+}
 
 // 验证器函数
 const validateRealName = (rule, value, callback) => {
@@ -232,6 +252,7 @@ const registerRules = {
   realName: [{ validator: validateRealName, trigger: 'blur' }],
   teacherId: [{ validator: validateTeacherId, trigger: 'blur' }],
   email: [{ validator: validateEmail, trigger: 'blur' }],
+  schoolName: [{ validator: validateSchoolName, trigger: ['change', 'blur'] }],
   password: [{ validator: validatePassword, trigger: 'blur' }],
   confirmPassword: [{ validator: validateConfirmPassword, trigger: 'blur' }],
   phoneNumber: [{ validator: validatePhone, trigger: 'blur' }]

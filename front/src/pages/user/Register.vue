@@ -92,22 +92,72 @@
 
               <!-- 学校名称 -->
               <el-form-item prop="schoolName">
-                <el-input
+                <el-select
                   v-model="registerForm.schoolName"
-                  placeholder="学校名称（可选）"
-                  prefix-icon="School"
+                  placeholder="请选择学校校区"
+                  filterable
                   clearable
-                />
+                >
+                  <el-option
+                    v-for="school in schoolOptions"
+                    :key="school"
+                    :label="school"
+                    :value="school"
+                  />
+                </el-select>
+              </el-form-item>
+
+              <!-- 附件图片 -->
+              <el-form-item prop="attachmentUrl">
+                <div class="upload-field">
+                  <div class="upload-label">上传附件图片</div>
+                  <el-upload
+                    class="avatar-uploader"
+                    action=""
+                    :http-request="handleAvatarUpload"
+                    :file-list="avatarFileList"
+                    :show-file-list="false"
+                    :before-upload="beforeAvatarUpload"
+                    :disabled="loading || avatarUploading"
+                    :on-remove="handleAvatarRemove"
+                  >
+                    <template v-if="registerForm.attachmentUrl">
+                      <el-image
+                        :src="registerForm.attachmentUrl"
+                        fit="cover"
+                        class="avatar-preview"
+                        :preview-src-list="[registerForm.attachmentUrl]"
+                      />
+                    </template>
+                    <template v-else>
+                      <div class="avatar-uploader-placeholder">
+                        <el-icon class="avatar-uploader-icon">
+                          <PictureFilled />
+                        </el-icon>
+                        <div class="text-sm text-gray-500 mt-2">点击上传</div>
+                        <div class="text-xs text-gray-400">支持 JPG/PNG，≤5MB</div>
+                      </div>
+                    </template>
+                  </el-upload>
+                  <p class="upload-hint">请上传学生相关的证明/附件图片，管理员将可在详情中查看。</p>
+                </div>
               </el-form-item>
 
               <!-- 专业 -->
               <el-form-item prop="department">
-                <el-input
+                <el-select
                   v-model="registerForm.department"
-                  placeholder="专业（可选）"
-                  prefix-icon="Reading"
+                  placeholder="请选择专业"
+                  filterable
                   clearable
-                />
+                >
+                  <el-option
+                    v-for="major in majorOptions"
+                    :key="major"
+                    :label="major"
+                    :value="major"
+                  />
+                </el-select>
               </el-form-item>
 
               <!-- 密码 -->
@@ -182,10 +232,37 @@ import { ElMessage, type FormInstance, type FormRules } from 'element-plus'
 import { register } from '@/api/auth'
 import type { UserRegisterRequest } from '@/types/user'
 import { UserRole } from '@/types/user'
+import { uploadImage } from '@/api/upload'
+import type { UploadFile, UploadRequestOptions } from 'element-plus'
+import { PictureFilled } from '@element-plus/icons-vue'
+
+const resolveFileUrl = (url?: string) => {
+  if (!url) return ''
+  if (url.startsWith('http')) return url
+  const base = (import.meta.env.VITE_API_BASE_URL || '').replace(/\/$/, '')
+  const path = url.startsWith('/') ? url : `/${url}`
+  return `${base}${path}`
+}
 
 const router = useRouter()
 const loading = ref(false)
+const avatarUploading = ref(false)
+const avatarFileList = ref<UploadFile[]>([])
 const registerFormRef = ref<FormInstance>()
+
+const schoolOptions = [
+  '北京城市学院航天城校区',
+  '北京城市学院顺义校区'
+]
+
+const majorOptions = [
+  '人工智能(数字技术产业学院)',
+  '物联网工程(数字技术产业学院)',
+  '数据科学与大数据技术(数字技术产业学院)',
+  '软件工程(数字技术产业学院)',
+  '计算机科学与技术(数字技术产业学院)',
+  '机械电子工程'
+]
 
 // 注册表单数据
 const registerForm = reactive<UserRegisterRequest & { confirmPassword: string; studentId: string }>({
@@ -198,9 +275,20 @@ const registerForm = reactive<UserRegisterRequest & { confirmPassword: string; s
   phoneNumber: '',
   studentId: '',
   schoolName: '',
+  attachmentUrl: '',
   department: '',
   role: UserRole.STUDENT
 })
+
+const validateSchoolName = (rule: any, value: string, callback: any) => {
+  if (!value) {
+    callback(new Error('请选择学校校区'))
+  } else if (!schoolOptions.includes(value)) {
+    callback(new Error('学校校区只能在下拉列表中选择'))
+  } else {
+    callback()
+  }
+}
 
 // 用户名验证器
 const validateUsername = (rule: any, value: string, callback: any) => {
@@ -297,6 +385,24 @@ const validatePhone = (rule: any, value: string, callback: any) => {
   }
 }
 
+const validateAvatar = (rule: any, value: string, callback: any) => {
+  if (!registerForm.attachmentUrl) {
+    callback(new Error('请上传附件图片'))
+  } else {
+    callback()
+  }
+}
+
+const validateDepartment = (rule: any, value: string, callback: any) => {
+  if (!registerForm.department) {
+    callback(new Error('请选择专业'))
+  } else if (!majorOptions.includes(registerForm.department)) {
+    callback(new Error('专业必须从下拉列表中选择'))
+  } else {
+    callback()
+  }
+}
+
 // 表单验证规则
 const registerRules: FormRules = {
   username: [
@@ -313,6 +419,15 @@ const registerRules: FormRules = {
   ],
   phoneNumber: [
     { validator: validatePhone, trigger: ['blur', 'change'] }
+  ],
+  schoolName: [
+    { validator: validateSchoolName, trigger: ['change', 'blur'] }
+  ],
+  department: [
+    { validator: validateDepartment, trigger: ['change', 'blur'] }
+  ],
+  attachmentUrl: [
+    { validator: validateAvatar, trigger: ['change'] }
   ],
   password: [
     { validator: validatePassword, trigger: ['blur', 'change'] }
@@ -401,9 +516,11 @@ const resetForm = () => {
     phoneNumber: '',
     studentId: '',
     schoolName: '',
+    attachmentUrl: '',
     department: '',
     role: 'STUDENT'
   })
+  avatarFileList.value = []
 }
 
 // 处理注册
@@ -420,6 +537,10 @@ const handleRegister = async () => {
       ElMessage.warning('请完善表单信息，确保所有必填字段都已正确填写')
       return
     }
+    if (avatarUploading.value) {
+      ElMessage.info('图片正在上传，请稍候')
+      return
+    }
     
     loading.value = true
     
@@ -434,6 +555,7 @@ const handleRegister = async () => {
       studentId: registerForm.studentId.trim(),  // 修复：使用 studentId 而不是 studentNumber
       schoolName: registerForm.schoolName?.trim() || undefined,
       department: registerForm.department?.trim() || undefined,
+      attachmentUrl: registerForm.attachmentUrl,
       role: UserRole.STUDENT
     }
     
@@ -481,6 +603,52 @@ const handleRegister = async () => {
     loading.value = false
   }
 }
+
+const beforeAvatarUpload = (file: File) => {
+  const isImage = file.type.startsWith('image/')
+  const isLt5M = file.size / 1024 / 1024 < 5
+  if (!isImage) {
+    ElMessage.error('仅支持上传图片文件')
+  }
+  if (!isLt5M) {
+    ElMessage.error('图片大小不能超过 5MB')
+  }
+  return isImage && isLt5M
+}
+
+const handleAvatarUpload = async (options: UploadRequestOptions) => {
+  const file = options.file as File
+  try {
+    avatarUploading.value = true
+    const res = await uploadImage(file)
+    const url = (res as any)?.data?.url || (res as any)?.url || (res as any)?.data
+    if (!url) {
+      throw new Error('上传失败，未获取到文件地址')
+    }
+    const resolvedUrl = resolveFileUrl(url)
+    registerForm.attachmentUrl = resolvedUrl
+    avatarFileList.value = [
+      {
+        name: file.name,
+        url: resolvedUrl
+      } as UploadFile
+    ]
+    registerFormRef.value?.clearValidate('attachmentUrl')
+    options.onSuccess?.(res, options.file)
+    ElMessage.success('附件上传成功')
+  } catch (error) {
+    console.error('上传图片失败:', error)
+    options.onError?.(error as any)
+    ElMessage.error('上传图片失败，请重试')
+  } finally {
+    avatarUploading.value = false
+  }
+}
+
+const handleAvatarRemove = () => {
+  registerForm.attachmentUrl = ''
+  avatarFileList.value = []
+}
 </script>
 
 <style scoped>
@@ -523,6 +691,63 @@ const handleRegister = async () => {
 
 .register-form {
   padding: 40px;
+}
+
+.upload-field {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.upload-label {
+  font-weight: 600;
+  color: #374151;
+}
+
+.avatar-uploader {
+  width: 100%;
+}
+
+.avatar-uploader :deep(.el-upload) {
+  width: 100%;
+}
+
+.avatar-uploader-placeholder {
+  width: 100%;
+  min-height: 180px;
+  border: 1px dashed #cbd5e1;
+  border-radius: 12px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: #f8fafc;
+  transition: all 0.2s ease;
+  padding: 16px;
+}
+
+.avatar-uploader-placeholder:hover {
+  border-color: #667eea;
+  background: #eef2ff;
+}
+
+.avatar-uploader-icon {
+  font-size: 32px;
+  color: #94a3b8;
+}
+
+.avatar-preview {
+  width: 100%;
+  max-height: 260px;
+  border-radius: 12px;
+  object-fit: cover;
+  border: 1px solid #e5e7eb;
+}
+
+.upload-hint {
+  font-size: 12px;
+  color: #64748b;
+  margin: 4px 0 0;
 }
 
 .form-row {

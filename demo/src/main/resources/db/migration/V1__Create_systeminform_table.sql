@@ -7,4 +7,4 @@ CREATE TABLE systeminform (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='系统通知表';
 
 -- 插入默认通知内容
-INSERT INTO systeminform (content) VALUES ('欢迎使用竞赛管理系统！');
+INSERT INTO systeminform (content) VALUES ('欢迎使用北城竞赛管理系统！');

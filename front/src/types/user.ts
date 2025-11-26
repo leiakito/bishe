@@ -50,6 +50,8 @@ export interface UserRegisterRequest {
   password: string
   email: string
   phone: string
+  avatar?: string
+  attachmentUrl?: string
   realName: string
   role: UserRole
   // 学生专用字段

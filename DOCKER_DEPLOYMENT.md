@@ -1,6 +1,6 @@
 # Docker 一键部署指南
 
-本文档介绍如何使用 Docker 和 Docker Compose 一键部署竞赛管理系统。
+本文档介绍如何使用 Docker 和 Docker Compose 一键部署北城竞赛管理系统。
 
 ## 📋 前置要求
 

@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# 竞赛管理系统 Docker 一键部署脚本
+# 北城竞赛管理系统 Docker 一键部署脚本
 # 使用方法: ./deploy.sh [start|stop|restart|logs|status]
 
 set -e
@@ -182,7 +182,7 @@ main() {
             clean
             ;;
         *)
-            echo "竞赛管理系统 Docker 部署脚本"
+            echo "北城竞赛管理系统 Docker 部署脚本"
             echo ""
             echo "使用方法: $0 [命令]"
             echo ""

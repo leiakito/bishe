@@ -51,6 +51,8 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         "/api/competitions/levels",
         "/api/test/public",
         "/api/systeminform",
+        "/api/files/upload",
+        "/uploads",
         "/debug",
         "/h2-console",
         "/swagger-ui",

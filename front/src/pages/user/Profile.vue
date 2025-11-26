@@ -207,6 +207,22 @@
             </div>
           </el-form>
         </div>
+
+        <!-- 附件图片预览 -->
+        <div
+          v-if="profileForm.attachmentUrl"
+          class="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mt-6"
+        >
+          <div class="form-header flex items-center justify-between mb-4">
+            <h2 class="text-lg font-semibold text-gray-800">附件图片</h2>
+          </div>
+          <el-image
+            :src="resolveFileUrl(profileForm.attachmentUrl)"
+            fit="cover"
+            class="profile-attachment"
+            :preview-src-list="[resolveFileUrl(profileForm.attachmentUrl)]"
+          />
+        </div>
       </div>
     </div>
     
@@ -223,6 +239,13 @@ import type { UserUpdateRequest, ChangePasswordRequest } from '@/types'
 import { updateProfile } from '@/api/auth'
 
 const authStore = useAuthStore()
+const resolveFileUrl = (url?: string) => {
+  if (!url) return ''
+  if (url.startsWith('http')) return url
+  const base = (import.meta.env.VITE_API_BASE_URL || '').replace(/\/$/, '')
+  const path = url.startsWith('/') ? url : `/${url}`
+  return `${base}${path}`
+}
 
 // 响应式数据
 const profileFormRef = ref<FormInstance>()
@@ -238,7 +261,8 @@ const profileForm = reactive({
   phone: '',
   studentId: '',
   schoolName: '',
-  department: ''
+  department: '',
+  attachmentUrl: ''
 })
 
 const passwordForm = reactive<ChangePasswordRequest>({
@@ -372,7 +396,8 @@ const initProfileForm = () => {
       phone: user.value.phone || '',
       studentId: user.value.studentId || '',
       schoolName: user.value.schoolName || '',
-      department: user.value.department || ''
+      department: user.value.department || '',
+      attachmentUrl: user.value.attachmentUrl || ''
     })
   }
 }
@@ -404,7 +429,8 @@ const handleUpdateProfile = async () => {
       email: profileForm.email,
       phone: profileForm.phone || null,
       schoolName: profileForm.schoolName || '',
-      department: profileForm.department || ''
+      department: profileForm.department || '',
+      attachmentUrl: profileForm.attachmentUrl || ''
     }
 
     console.log('发送更新数据:', updateData)

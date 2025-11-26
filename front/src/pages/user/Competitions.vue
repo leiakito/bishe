@@ -185,10 +185,20 @@
           <el-tag v-if="searchFilters.level" closable @close="searchFilters.level = ''; handleFilterChange()" type="danger" size="small">
             级别: {{ getLevelLabel(searchFilters.level) }}
           </el-tag>
-          <el-tag v-if="searchFilters.registrationDateRange.length === 2" closable @close="searchFilters.registrationDateRange = []; handleFilterChange()" size="small">
+          <el-tag
+            v-if="Array.isArray(searchFilters.registrationDateRange) && searchFilters.registrationDateRange.length === 2"
+            closable
+            @close="searchFilters.registrationDateRange = []; handleFilterChange()"
+            size="small"
+          >
             报名时间: {{ searchFilters.registrationDateRange[0] }} 至 {{ searchFilters.registrationDateRange[1] }}
           </el-tag>
-          <el-tag v-if="searchFilters.competitionDateRange.length === 2" closable @close="searchFilters.competitionDateRange = []; handleFilterChange()" size="small">
+          <el-tag
+            v-if="Array.isArray(searchFilters.competitionDateRange) && searchFilters.competitionDateRange.length === 2"
+            closable
+            @close="searchFilters.competitionDateRange = []; handleFilterChange()"
+            size="small"
+          >
             竞赛时间: {{ searchFilters.competitionDateRange[0] }} 至 {{ searchFilters.competitionDateRange[1] }}
           </el-tag>
         </div>
@@ -714,8 +724,8 @@ const hasActiveFilters = computed(() => {
     searchFilters.status ||
     searchFilters.category ||
     searchFilters.level ||
-    searchFilters.registrationDateRange.length > 0 ||
-    searchFilters.competitionDateRange.length > 0
+    (Array.isArray(searchFilters.registrationDateRange) && searchFilters.registrationDateRange.length > 0) ||
+    (Array.isArray(searchFilters.competitionDateRange) && searchFilters.competitionDateRange.length > 0)
   )
 })
 
@@ -815,14 +825,21 @@ const fetchCompetitions = async () => {
     // 处理日期范围 - 根据后端接口参数名
     // 后端的startDate/endDate是用于筛选竞赛时间(competitionStartTime/competitionEndTime)
     // 注意：目前后端API只支持竞赛时间筛选，不支持报名时间筛选
-    if (searchFilters.competitionDateRange.length === 2) {
-      params.startDate = searchFilters.competitionDateRange[0]
-      params.endDate = searchFilters.competitionDateRange[1]
+    const competitionDateRange = Array.isArray(searchFilters.competitionDateRange)
+      ? searchFilters.competitionDateRange
+      : []
+    const registrationDateRange = Array.isArray(searchFilters.registrationDateRange)
+      ? searchFilters.registrationDateRange
+      : []
+
+    if (competitionDateRange.length === 2) {
+      params.startDate = competitionDateRange[0]
+      params.endDate = competitionDateRange[1]
     }
 
     // 报名时间筛选暂不可用，因为后端API不支持
     // 如果用户设置了报名时间筛选，我们在前端过滤
-    if (searchFilters.registrationDateRange.length === 2) {
+    if (registrationDateRange.length === 2) {
       // 这里我们暂时不发送给后端，后续需要后端支持
       console.warn('报名时间筛选暂不支持，需要后端API扩展')
     }
@@ -832,9 +849,10 @@ const fetchCompetitions = async () => {
     const response = await getStudentCompetitions(params)
     console.log('Competition API response:', response)
     
-    if (response && response.content) {
+    const content = (response && (response.content || (response.data && response.data.content))) || []
+    if (content) {
       // 适配数据格式，将后端Competition转换为前端Competition格式
-      let processedCompetitions = (response.content || []).map((comp: any) => ({
+      let processedCompetitions = (content || []).map((comp: any) => ({
         ...comp,
         startTime: comp.competitionStartTime || comp.startTime,
         endTime: comp.competitionEndTime || comp.endTime,
@@ -844,9 +862,9 @@ const fetchCompetitions = async () => {
       }))
 
       // 前端过滤报名时间（因为后端API不支持）
-      if (searchFilters.registrationDateRange.length === 2) {
-        const regStartDate = new Date(searchFilters.registrationDateRange[0]).getTime()
-        const regEndDate = new Date(searchFilters.registrationDateRange[1]).getTime()
+      if (registrationDateRange.length === 2) {
+        const regStartDate = new Date(registrationDateRange[0]).getTime()
+        const regEndDate = new Date(registrationDateRange[1]).getTime()
 
         processedCompetitions = processedCompetitions.filter(comp => {
           if (!comp.registrationStartTime || !comp.registrationEndTime) return true
@@ -867,7 +885,7 @@ const fetchCompetitions = async () => {
       }
 
       pagination.total = processedCompetitions.length
-      pagination.current = (response.number || 0) + 1 // 后端使用0-based分页，前端显示1-based
+      pagination.current = (response.number || response.data?.number || 0) + 1 // 后端使用0-based分页，前端显示1-based
 
       console.log('Processed competitions:', competitions.value)
       console.log('Pagination info:', pagination)

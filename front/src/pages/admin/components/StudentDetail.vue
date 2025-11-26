@@ -121,6 +121,24 @@
                       <label><el-icon class="mr-1"><User /></el-icon>真实姓名</label>
                       <span class="font-medium">{{ student.realName || '-' }}</span>
                     </div>
+                    <div class="info-item attachment-item" v-if="student.attachmentUrl">
+                      <label><el-icon class="mr-1"><Document /></el-icon>附件图片</label>
+                      <el-image
+                        :src="resolveFileUrl(student.attachmentUrl)"
+                        fit="cover"
+                        class="attachment-image"
+                        :preview-src-list="[resolveFileUrl(student.attachmentUrl)]"
+                      />
+                    </div>
+                    <div class="info-item attachment-item" v-if="student.attachmentUrl">
+                      <label><el-icon class="mr-1"><Document /></el-icon>附件图片</label>
+                      <el-image
+                        :src="resolveFileUrl(student.attachmentUrl)"
+                        fit="cover"
+                        class="attachment-image"
+                        :preview-src-list="[resolveFileUrl(student.attachmentUrl)]"
+                      />
+                    </div>
 
 
 
@@ -154,6 +172,10 @@
                     <div class="info-item">
                       <label><el-icon class="mr-1"><School /></el-icon>学校</label>
                       <span class="font-medium">{{ student.schoolName || '-' }}</span>
+                    </div>
+                    <div class="info-item" v-if="student.department">
+                      <label><el-icon class="mr-1"><Reading /></el-icon>专业</label>
+                      <span class="font-medium">{{ student.department || '-' }}</span>
                     </div>
 
 
@@ -307,6 +329,14 @@ const props = withDefaults(defineProps<Props>(), {
 })
 
 const emit = defineEmits<Emits>()
+
+const resolveFileUrl = (url?: string) => {
+  if (!url) return ''
+  if (url.startsWith('http')) return url
+  const base = (import.meta.env.VITE_API_BASE_URL || '').replace(/\/$/, '')
+  const path = url.startsWith('/') ? url : `/${url}`
+  return `${base}${path}`
+}
 
 // 响应式数据
 const activeTab = ref('basic')
@@ -575,6 +605,22 @@ const handleEdit = () => {
   text-align: right;
   flex: 1;
   font-size: 14px;
+}
+
+.attachment-item {
+  align-items: flex-start;
+}
+
+.attachment-item label {
+  margin-top: 8px;
+}
+
+.attachment-image {
+  width: 200px;
+  height: 140px;
+  border-radius: 10px;
+  object-fit: cover;
+  border: 1px solid #e5e7eb;
 }
 
 /* 活动时间线 */

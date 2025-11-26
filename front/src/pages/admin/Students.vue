@@ -231,11 +231,16 @@
           </template>
         </el-table-column>
         
-        <el-table-column label="操作" width="160" fixed="right">
+        <el-table-column
+          label="操作"
+          min-width="200"
+          fixed="right"
+          class-name="actions-column"
+        >
           <template #default="{ row }">
-            <div class="flex flex-col space-y-1">
+            <div class="actions-cell">
               <!-- 主要操作 -->
-              <div class="flex space-x-1">
+              <div class="action-row">
                 <el-button
                   type="primary"
                   size="small"
@@ -254,7 +259,7 @@
                 </el-button>
               </div>
               <!-- 次要操作 -->
-              <div class="flex space-x-1">
+              <div class="action-row">
                 <el-button
                   type="info"
                   size="small"
@@ -667,6 +672,30 @@ onMounted(() => {
   overflow: hidden;
 }
 
+.actions-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.action-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.action-row .el-button {
+  flex: 1 1 84px;
+  justify-content: center;
+  padding: 6px 8px;
+}
+
+.responsive-table :deep(.actions-column .cell) {
+  overflow: visible;
+  white-space: normal;
+  padding: 10px 8px;
+}
+
 .action-buttons {
   display: flex;
   gap: 12px;
@@ -755,6 +784,19 @@ onMounted(() => {
   .responsive-table :deep(.contact-column) {
     min-width: 80px;
   }
+
+  .actions-cell {
+    gap: 6px;
+  }
+
+  .action-row {
+    gap: 6px;
+  }
+
+  .action-row .el-button {
+    flex-basis: 48%;
+    padding: 4px 6px;
+  }
 }
 
 @media (max-width: 480px) {
@@ -768,6 +810,12 @@ onMounted(() => {
 @media (max-width: 992px) {
   .hidden-md {
     display: none !important;
+  }
+}
+
+@media (max-width: 1024px) {
+  .responsive-table :deep(.actions-column .cell) {
+    min-width: 220px;
   }
 }
 </style>

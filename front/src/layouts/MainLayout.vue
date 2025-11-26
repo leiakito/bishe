@@ -15,7 +15,7 @@
               <School />
             </el-icon>
           </div>
-          <span class="text-lg font-semibold text-gray-800">竞赛管理系统</span>
+          <span class="text-lg font-semibold text-gray-800">北城北城竞赛管理系统</span>
         </div>
         <div v-else class="w-8 h-8 bg-blue-500 rounded-lg flex items-center justify-center">
           <el-icon class="text-white">

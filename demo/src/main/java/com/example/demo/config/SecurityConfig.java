@@ -74,6 +74,8 @@ public class SecurityConfig {
                     "/api/departments",
                     "/api/systeminform",
                     "/api/systeminform/**",
+                    "/api/files/upload",
+                    "/uploads/**",
                     "/debug/**",
                     "/h2-console/**",
                     "/swagger-ui/**",

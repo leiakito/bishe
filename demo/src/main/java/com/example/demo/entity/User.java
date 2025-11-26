@@ -69,6 +69,12 @@ public class User {
     @Column(name = "title")
     private String title;
 
+    @Column(name = "avatar")
+    private String avatar;
+
+    @Column(name = "attachment_url")
+    private String attachmentUrl;
+
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
@@ -258,5 +264,21 @@ public class User {
 
     public void setTitle(String title) {
         this.title = title;
+    }
+
+    public String getAvatar() {
+        return avatar;
+    }
+
+    public void setAvatar(String avatar) {
+        this.avatar = avatar;
+    }
+
+    public String getAttachmentUrl() {
+        return attachmentUrl;
+    }
+
+    public void setAttachmentUrl(String attachmentUrl) {
+        this.attachmentUrl = attachmentUrl;
     }
 }

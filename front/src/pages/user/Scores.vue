@@ -446,7 +446,7 @@ const printScores = () => {
           </tbody>
         </table>
         <div class="footer">
-          <p>竞赛管理系统 - 成绩单</p>
+          <p>北城竞赛管理系统 - 成绩单</p>
         </div>
       </body>
     </html>
@@ -506,7 +506,7 @@ const printSingleScore = () => {
           <div class="value">${formatDateTime(score.gradedAt)}</div>
         </div>
         <div class="footer">
-          <p>竞赛管理系统</p>
+          <p>北城竞赛管理系统</p>
           <p>打印时间：${new Date().toLocaleString('zh-CN')}</p>
         </div>
       </body>

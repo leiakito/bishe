@@ -326,12 +326,28 @@ public class UserService {
                 user.setDepartment(department.trim());
             }
         }
-        
+
         // 更新职称
         if (updateData.containsKey("title")) {
             String title = (String) updateData.get("title");
             if (title != null) {
                 user.setTitle(title.trim());
+            }
+        }
+
+        // 更新头像
+        if (updateData.containsKey("avatar")) {
+            String avatar = (String) updateData.get("avatar");
+            if (avatar != null) {
+                user.setAvatar(avatar.trim());
+            }
+        }
+
+        // 更新附件图片
+        if (updateData.containsKey("attachmentUrl")) {
+            String attachmentUrl = (String) updateData.get("attachmentUrl");
+            if (attachmentUrl != null) {
+                user.setAttachmentUrl(attachmentUrl.trim());
             }
         }
         
@@ -647,6 +663,20 @@ public class UserService {
                 existingUser.setDepartment(department);
             }
         }
+
+        if (updateRequest.containsKey("avatar")) {
+            String avatar = (String) updateRequest.get("avatar");
+            if (avatar != null) {
+                existingUser.setAvatar(avatar);
+            }
+        }
+
+        if (updateRequest.containsKey("attachmentUrl")) {
+            String attachmentUrl = (String) updateRequest.get("attachmentUrl");
+            if (attachmentUrl != null) {
+                existingUser.setAttachmentUrl(attachmentUrl);
+            }
+        }
         
         // 更新时间戳
         existingUser.setUpdatedAt(LocalDateTime.now());
@@ -716,6 +746,16 @@ public class UserService {
         // 更新职称
         if (updateRequest.getTitle() != null) {
             existingUser.setTitle(updateRequest.getTitle().trim());
+        }
+
+        // 更新头像
+        if (updateRequest.getAvatar() != null) {
+            existingUser.setAvatar(updateRequest.getAvatar());
+        }
+
+        // 更新附件图片
+        if (updateRequest.getAttachmentUrl() != null) {
+            existingUser.setAttachmentUrl(updateRequest.getAttachmentUrl());
         }
 
         // 更新时间戳

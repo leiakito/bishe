@@ -10,7 +10,7 @@
                 <School />
               </el-icon>
             </div>
-            <h1 class="text-3xl font-bold mb-4">竞赛管理系统</h1>
+            <h1 class="text-3xl font-bold mb-4">北城竞赛管理系统</h1>
             <p class="text-blue-100 text-lg leading-relaxed">
               专业的学科竞赛管理平台<br>
               助力教育教学质量提升
@@ -35,7 +35,7 @@
                   <School />
                 </el-icon>
               </div>
-              <h1 class="text-2xl font-bold text-gray-800">竞赛管理系统</h1>
+              <h1 class="text-2xl font-bold text-gray-800">北城竞赛管理系统</h1>
             </div>
             
             <div class="text-center mb-8">
