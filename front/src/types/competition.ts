@@ -202,6 +202,17 @@ export interface CompetitionOption {
   icon?: string
 }
 
+export interface CompetitionCategoryItem {
+  id: number
+  name: string
+  code: string
+  description?: string
+  status: 'ACTIVE' | 'INACTIVE' | string
+  usage?: number
+  createdAt?: string
+  updatedAt?: string
+}
+
 // 表格列配置
 export interface TableColumn {
   key: string

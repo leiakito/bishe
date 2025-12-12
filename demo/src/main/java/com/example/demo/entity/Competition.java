@@ -29,9 +29,8 @@ public class Competition {
     @Column(columnDefinition = "TEXT")
     private String description;
 
-    @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
-    private CompetitionCategory category;
+    @Column(nullable = false, length = 100)
+    private String category;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
@@ -122,11 +121,6 @@ public class Competition {
     @JsonIgnore
     private List<Registration> registrations;
 
-    // 枚举定义
-    public enum CompetitionCategory {
-        PROGRAMMING, MATHEMATICS, PHYSICS, CHEMISTRY, BIOLOGY, ENGLISH, DESIGN, INNOVATION, OTHER
-    }
-
     public enum CompetitionLevel {
         SCHOOL, CITY, PROVINCE, NATIONAL, INTERNATIONAL
     }
@@ -138,7 +132,7 @@ public class Competition {
     // 构造函数
     public Competition() {}
 
-    public Competition(String name, String description, CompetitionCategory category, 
+    public Competition(String name, String description, String category, 
                       CompetitionLevel level, User creator) {
         this.name = name;
         this.description = description;
@@ -172,11 +166,11 @@ public class Competition {
         this.description = description;
     }
 
-    public CompetitionCategory getCategory() {
+    public String getCategory() {
         return category;
     }
 
-    public void setCategory(CompetitionCategory category) {
+    public void setCategory(String category) {
         this.category = category;
     }
 

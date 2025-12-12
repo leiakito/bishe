@@ -506,8 +506,10 @@ import {
 import type { 
   Competition as BaseCompetition, 
   AdminCompetitionQueryParams, 
-  AdminCompetitionStats
+  AdminCompetitionStats,
+  CompetitionOption
 } from '@/types/competition'
+import * as categoryApi from '@/api/category'
 
 // 扩展Competition类型以包含UI状态
 interface Competition extends BaseCompetition {
@@ -581,9 +583,28 @@ const stats = ref<AdminCompetitionStats>({
 })
 
 // 选项数据
-const categoryOptions = computed(() => COMPETITION_CATEGORY_OPTIONS)
+const categoryOptions = ref<CompetitionOption[]>(COMPETITION_CATEGORY_OPTIONS)
 const levelOptions = computed(() => COMPETITION_LEVEL_OPTIONS)
 const statusOptions = computed(() => COMPETITION_STATUS_OPTIONS)
+
+const loadCategoryOptions = async () => {
+  try {
+    const res = await categoryApi.fetchActiveCategories()
+    if (res.success && Array.isArray(res.data)) {
+      categoryOptions.value = [
+        { label: '全部分类', value: '' },
+        ...res.data.map(item => ({
+          label: item.name,
+          value: item.code,
+          color: 'primary'
+        }))
+      ]
+    }
+  } catch (error) {
+    console.error('加载分类选项失败', error)
+    categoryOptions.value = COMPETITION_CATEGORY_OPTIONS
+  }
+}
 
 // 方法
 const fetchCompetitions = async () => {
@@ -974,5 +995,6 @@ const getStatusText = (status: string) => {
 onMounted(() => {
   fetchCompetitions()
   fetchStats()
+  loadCategoryOptions()
 })
 </script>

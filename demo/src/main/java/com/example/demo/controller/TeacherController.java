@@ -514,7 +514,7 @@ public class TeacherController {
 
             // 设置分类和级别
             if (competitionData.get("category") != null) {
-                competition.setCategory(Competition.CompetitionCategory.valueOf((String) competitionData.get("category")));
+                competition.setCategory(((String) competitionData.get("category")).toUpperCase());
             }
             if (competitionData.get("level") != null) {
                 competition.setLevel(Competition.CompetitionLevel.valueOf((String) competitionData.get("level")));

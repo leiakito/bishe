@@ -60,7 +60,7 @@ public class CompetitionController {
     @GetMapping("/export")
     public ResponseEntity<?> exportCompetitions(
             @RequestParam(required = false) String keyword,
-            @RequestParam(required = false) Competition.CompetitionCategory category,
+            @RequestParam(required = false) String category,
             @RequestParam(required = false) Competition.CompetitionStatus status,
             @RequestParam(required = false) String startDate,
             @RequestParam(required = false) String endDate,
@@ -254,7 +254,7 @@ public class CompetitionController {
     // 根据分类获取竞赛
     @GetMapping("/category/{category}")
     public ResponseEntity<?> getCompetitionsByCategory(
-            @PathVariable Competition.CompetitionCategory category,
+            @PathVariable String category,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size) {
         try {
@@ -324,7 +324,7 @@ public class CompetitionController {
     @GetMapping("/filter")
     public ResponseEntity<?> filterCompetitions(
             @RequestParam(required = false) String keyword,
-            @RequestParam(required = false) Competition.CompetitionCategory category,
+            @RequestParam(required = false) String category,
             @RequestParam(required = false) Competition.CompetitionStatus status,
             @RequestParam(required = false) String startDate,
             @RequestParam(required = false) String endDate,

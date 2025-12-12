@@ -71,6 +71,17 @@
           </router-link>
 
           <router-link
+            to="/admin-dashboard/categories"
+            class="menu-item flex items-center space-x-3 px-3 py-2 rounded-lg text-gray-700 hover:bg-gray-100"
+            :class="{ 'bg-blue-50 text-blue-600': activeMenu.startsWith('/admin-dashboard/categories') }"
+          >
+            <el-icon>
+              <Collection />
+            </el-icon>
+            <span v-show="!collapsed">竞赛分类</span>
+          </router-link>
+
+          <router-link
             to="/admin-dashboard/settings"
             class="menu-item flex items-center space-x-3 px-3 py-2 rounded-lg text-gray-700 hover:bg-gray-100"
             :class="{ 'bg-blue-50 text-blue-600': activeMenu.startsWith('/admin-dashboard/settings') }"
@@ -131,6 +142,7 @@ import {
   Trophy,
   House,
   Setting,
+  Collection,
   Fold,
   Expand,
   ArrowDown

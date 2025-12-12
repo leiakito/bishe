@@ -32,6 +32,9 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.time.format.DateTimeFormatter;
 
+import static com.example.demo.entity.Question.QuestionCategory.*;
+import static com.example.demo.entity.Question.QuestionType.PROGRAMMING;
+
 @Service
 @Transactional
 public class CompetitionService {
@@ -59,6 +62,13 @@ public class CompetitionService {
     
     @Autowired
     private ExamPaperRepository examPaperRepository;
+
+    private String normalizeCategoryValue(String category) {
+        if (category == null || category.trim().isEmpty()) {
+            return null;
+        }
+        return category.trim().toUpperCase();
+    }
     
     // 创建竞赛
     public Competition createCompetition(Competition competition, Long creatorId) {
@@ -76,6 +86,11 @@ public class CompetitionService {
         // 生成竞赛编号
         competition.setCompetitionNumber(generateCompetitionNumber());
         competition.setCreator(creator);
+        String normalizedCategory = normalizeCategoryValue(competition.getCategory());
+        if (normalizedCategory == null) {
+            throw new RuntimeException("竞赛分类不能为空");
+        }
+        competition.setCategory(normalizedCategory);
         
         // 设置初始状态
         if (creator.getRole() == User.UserRole.ADMIN) {
@@ -165,10 +180,11 @@ public class CompetitionService {
     }
     
     // 根据分类获取竞赛
-    public Page<Competition> getCompetitionsByCategory(Competition.CompetitionCategory category, 
+    public Page<Competition> getCompetitionsByCategory(String category, 
                                                      Competition.CompetitionStatus status, 
                                                      Pageable pageable) {
-        return competitionRepository.findByCategoryAndStatus(category, status, pageable);
+        String normalizedCategory = normalizeCategoryValue(category);
+        return competitionRepository.findByCategoryAndStatus(normalizedCategory, status, pageable);
     }
     
     // 根据级别获取竞赛
@@ -185,12 +201,13 @@ public class CompetitionService {
     
     // 综合筛选竞赛
     public Page<Competition> filterCompetitions(String keyword, 
-                                              Competition.CompetitionCategory category,
+                                              String category,
                                               Competition.CompetitionStatus status,
                                               LocalDateTime startDate,
                                               LocalDateTime endDate,
                                               Pageable pageable) {
-        return competitionRepository.filterCompetitions(keyword, category, status, startDate, endDate, pageable);
+        String normalizedCategory = normalizeCategoryValue(category);
+        return competitionRepository.filterCompetitions(keyword, normalizedCategory, status, startDate, endDate, pageable);
     }
     
     // 获取正在报名的竞赛
@@ -328,7 +345,11 @@ public class CompetitionService {
             competition.setDescription(updatedCompetition.getDescription());
         }
         if (updatedCompetition.getCategory() != null) {
-            competition.setCategory(updatedCompetition.getCategory());
+            String normalizedCategory = normalizeCategoryValue(updatedCompetition.getCategory());
+            if (normalizedCategory == null) {
+                throw new RuntimeException("竞赛分类不能为空");
+            }
+            competition.setCategory(normalizedCategory);
         }
         if (updatedCompetition.getLevel() != null) {
             competition.setLevel(updatedCompetition.getLevel());
@@ -608,12 +629,12 @@ public class CompetitionService {
     
     // 获取用于导出的竞赛数据
     public List<Competition> getCompetitionsForExport(String keyword, 
-                                                     Competition.CompetitionCategory category,
+                                                     String category,
                                                      Competition.CompetitionStatus status,
                                                      LocalDateTime startDate,
                                                      LocalDateTime endDate) {
         // 使用现有的筛选方法，但不分页
-        Page<Competition> page = filterCompetitions(keyword, category, status, startDate, endDate, 
+        Page<Competition> page = filterCompetitions(keyword, normalizeCategoryValue(category), status, startDate, endDate, 
                                                    Pageable.unpaged());
         return page.getContent();
     }
@@ -698,36 +719,37 @@ public class CompetitionService {
         Cell cell2 = row.createCell(2);
         String categoryText = "";
         if (competition.getCategory() != null) {
-            switch (competition.getCategory()) {
-                case PROGRAMMING:
+            String cat = competition.getCategory().toUpperCase();
+            switch (cat) {
+                case "PROGRAMMING":
                     categoryText = "程序设计";
                     break;
-                case MATHEMATICS:
+                case "MATHEMATICS":
                     categoryText = "数学竞赛";
                     break;
-                case PHYSICS:
+                case "PHYSICS":
                     categoryText = "物理竞赛";
                     break;
-                case CHEMISTRY:
+                case "CHEMISTRY":
                     categoryText = "化学竞赛";
                     break;
-                case BIOLOGY:
+                case "BIOLOGY":
                     categoryText = "生物竞赛";
                     break;
-                case ENGLISH:
+                case "ENGLISH":
                     categoryText = "英语竞赛";
                     break;
-                case DESIGN:
+                case "DESIGN":
                     categoryText = "设计竞赛";
                     break;
-                case INNOVATION:
+                case "INNOVATION":
                     categoryText = "创新创业";
                     break;
-                case OTHER:
+                case "OTHER":
                     categoryText = "其他";
                     break;
                 default:
-                    categoryText = competition.getCategory().toString();
+                    categoryText = competition.getCategory();
             }
         }
         cell2.setCellValue(categoryText);

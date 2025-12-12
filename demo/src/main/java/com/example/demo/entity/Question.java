@@ -143,6 +143,7 @@ public class Question {
         MOBILE_DEVELOPMENT("移动开发"),
         CLOUD_COMPUTING("云计算"),
         CYBERSECURITY("网络安全"),
+        DESIGN("设计竞赛"),
         // 编程语言分类
         PYTHON("Python编程"),
         JAVA("Java编程"),

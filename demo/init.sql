@@ -50,7 +50,7 @@ CREATE TABLE IF NOT EXISTS competitions (
     id BIGINT AUTO_INCREMENT PRIMARY KEY COMMENT '竞赛ID',
     name VARCHAR(200) NOT NULL COMMENT '竞赛名称',
     description TEXT COMMENT '竞赛描述',
-    category ENUM('PROGRAMMING', 'MATHEMATICS', 'PHYSICS', 'CHEMISTRY', 'BIOLOGY', 'ENGLISH', 'DESIGN', 'INNOVATION', 'OTHER') NOT NULL COMMENT '竞赛类别',
+    category VARCHAR(100) NOT NULL COMMENT '竞赛类别',
     level ENUM('SCHOOL', 'CITY', 'PROVINCE', 'NATIONAL', 'INTERNATIONAL') NOT NULL COMMENT '竞赛级别',
     status ENUM('DRAFT', 'PUBLISHED', 'REGISTRATION_OPEN', 'REGISTRATION_CLOSED', 'IN_PROGRESS', 'ONGOING', 'COMPLETED', 'CANCELLED', 'PENDING_APPROVAL') NOT NULL DEFAULT 'DRAFT' COMMENT '竞赛状态',
     registration_start_time DATETIME NOT NULL COMMENT '报名开始时间',
@@ -84,6 +84,33 @@ CREATE TABLE IF NOT EXISTS competitions (
     INDEX idx_competition_time (competition_start_time, competition_end_time),
     FOREIGN KEY (creator_id) REFERENCES users(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='竞赛表';
+
+-- ============================================
+-- 2.1 竞赛分类表 (competition_categories)
+-- 维护可配置的竞赛分类
+-- ============================================
+CREATE TABLE IF NOT EXISTS competition_categories (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY COMMENT '分类ID',
+    code VARCHAR(100) NOT NULL UNIQUE COMMENT '分类编码（大写）',
+    name VARCHAR(100) NOT NULL COMMENT '分类名称',
+    description VARCHAR(255) COMMENT '描述',
+    status ENUM('ACTIVE', 'INACTIVE') NOT NULL DEFAULT 'ACTIVE' COMMENT '状态',
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+    INDEX idx_competition_category_status (status)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='竞赛分类表';
+
+INSERT IGNORE INTO competition_categories (code, name, description, status)
+VALUES 
+('PROGRAMMING', '程序设计', '内置分类', 'ACTIVE'),
+('MATHEMATICS', '数学竞赛', '内置分类', 'ACTIVE'),
+('PHYSICS', '物理竞赛', '内置分类', 'ACTIVE'),
+('CHEMISTRY', '化学竞赛', '内置分类', 'ACTIVE'),
+('BIOLOGY', '生物竞赛', '内置分类', 'ACTIVE'),
+('ENGLISH', '英语竞赛', '内置分类', 'ACTIVE'),
+('DESIGN', '设计竞赛', '内置分类', 'ACTIVE'),
+('INNOVATION', '创新创业', '内置分类', 'ACTIVE'),
+('OTHER', '其他', '内置分类', 'ACTIVE');
 
 -- ============================================
 -- 3. 团队表 (teams)
@@ -504,4 +531,3 @@ SELECT '数据库初始化完成！' AS message;
 SELECT CONCAT('共创建 ', COUNT(*), ' 张表') AS table_count 
 FROM information_schema.tables 
 WHERE table_schema = 'competition_system' AND table_type = 'BASE TABLE';
-

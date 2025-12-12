@@ -360,11 +360,12 @@
 </style>
 
 <script setup lang="ts">
-import { ref, reactive, computed, watch, nextTick } from 'vue'
+import { ref, reactive, computed, watch, nextTick, onMounted } from 'vue'
 import { ElMessage, type FormInstance, type FormRules } from 'element-plus'
 import type {
   Competition,
-  AdminCompetitionFormData
+  AdminCompetitionFormData,
+  CompetitionOption
 } from '../../../../types/competition'
 import {
   COMPETITION_CATEGORY_OPTIONS,
@@ -372,6 +373,7 @@ import {
   COMPETITION_STATUS_OPTIONS
 } from '../../../../types/competition'
 import * as adminCompetitionApi from '../../../../api/admin-competition'
+import * as categoryApi from '../../../../api/category'
 
 // Props
 interface Props {
@@ -426,9 +428,25 @@ const formData = reactive<AdminCompetitionFormData>({
 })
 
 // 选项数据
-const categoryOptions = computed(() => COMPETITION_CATEGORY_OPTIONS)
+const categoryOptions = ref<CompetitionOption[]>(COMPETITION_CATEGORY_OPTIONS)
 const levelOptions = computed(() => COMPETITION_LEVEL_OPTIONS)
 const statusOptions = computed(() => COMPETITION_STATUS_OPTIONS)
+
+const loadCategoryOptions = async () => {
+  try {
+    const res = await categoryApi.fetchActiveCategories()
+    if (res.success && Array.isArray(res.data)) {
+      categoryOptions.value = res.data.map(item => ({
+        label: item.name,
+        value: item.code,
+        color: 'primary'
+      }))
+    }
+  } catch (error) {
+    console.error('加载竞赛分类失败', error)
+    categoryOptions.value = COMPETITION_CATEGORY_OPTIONS
+  }
+}
 
 // 表单验证规则
 const formRules: FormRules = {
@@ -484,6 +502,10 @@ const formRules: FormRules = {
     { type: 'number', min: 0, message: '报名费用不能为负数', trigger: 'blur' }
   ]
 }
+
+onMounted(() => {
+  loadCategoryOptions()
+})
 
 // 方法
 const resetForm = () => {

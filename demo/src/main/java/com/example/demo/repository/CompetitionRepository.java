@@ -19,10 +19,12 @@ public interface CompetitionRepository extends JpaRepository<Competition, Long> 
     List<Competition> findByNameContaining(String name);
     
     // 根据分类查找竞赛
-    List<Competition> findByCategory(Competition.CompetitionCategory category);
+    List<Competition> findByCategory(String category);
     
     // 根据级别查找竞赛
     List<Competition> findByLevel(Competition.CompetitionLevel level);
+
+    long countByCategory(String category);
     
     // 根据状态查找竞赛
     List<Competition> findByStatus(Competition.CompetitionStatus status);
@@ -67,7 +69,7 @@ public interface CompetitionRepository extends JpaRepository<Competition, Long> 
     Page<Competition> findByStatus(Competition.CompetitionStatus status, Pageable pageable);
     
     // 根据分类和状态查找竞赛
-    Page<Competition> findByCategoryAndStatus(Competition.CompetitionCategory category, 
+    Page<Competition> findByCategoryAndStatus(String category, 
                                             Competition.CompetitionStatus status, 
                                             Pageable pageable);
     
@@ -131,7 +133,7 @@ public interface CompetitionRepository extends JpaRepository<Competition, Long> 
            "(:endDate IS NULL OR c.competitionEndTime <= :endDate)")
     Page<Competition> filterCompetitions(
             @Param("keyword") String keyword,
-            @Param("category") Competition.CompetitionCategory category,
+            @Param("category") String category,
             @Param("status") Competition.CompetitionStatus status,
             @Param("startDate") LocalDateTime startDate,
             @Param("endDate") LocalDateTime endDate,

@@ -262,6 +262,12 @@ const routes: RouteRecordRaw[] = [
         meta: { requiresAuth: true, roles: ['ADMIN'] },
       },
       {
+        path: 'categories',
+        name: 'CompetitionCategories',
+        component: () => import('@/pages/admin/CompetitionCategories.vue'),
+        meta: { requiresAuth: true, roles: ['ADMIN'] },
+      },
+      {
         path: 'settings',
         name: 'AdminSettings',
         component: () => import('@/pages/admin/SystemSettings.vue'),
